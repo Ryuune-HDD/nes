@@ -344,11 +344,11 @@ void nes_get_gamepadval(void)
 	{
 		PADdata0 |= 0x80; // RIGHT
 	}
-	if (GetAsyncKeyState(VK_UP) & 0x8000)
+	if (GetAsyncKeyState(VK_LEFT) & 0x8000)
 	{
 		PADdata0 |= 0x01; // A
 	}
-	if (GetAsyncKeyState(VK_DOWN) & 0x8000)
+	if (GetAsyncKeyState(VK_RIGHT) & 0x8000)
 	{
 		PADdata0 |= 0x02; // B
 	}
