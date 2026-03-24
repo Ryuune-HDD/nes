@@ -1,0 +1,686 @@
+                      终极NES CPU测试ROM
+                      -----------------------------
+
+
+V1.00 - 09/06/04
+
+作者：Kevin Horton
+
+
+---
+
+这是什么：
+
+这是一个相当全面的NES CPU测试套件。
+它旨在测试标志、指令和寄存器的几乎所有组合。其中一些测试非常困难，
+到目前为止，Nesten和Nesticle都没有通过。Nintendulator通过了，
+真正的NES也通过了（理所当然）。我还没有在更多模拟器上测试过。
+
+我尝试检查大多数指令后所有标志的状态。例如，CPY和CMP不应该影响溢出标志，
+而SBC和ADC应该影响。同样，所有形式的回绕都被测试了——零页回绕是大多数模拟器失败的测试。
+
+例如：
+
+LDA #001h
+LDA 0ffh,X   ;零页索引读取
+
+应该从000h读取字节...而不是0100h。这是因为零页指令不能跨越页面边界。
+
+---
+
+如何正确使用：
+
+只需在您选择的模拟器上运行.nes ROM文件。您可以选择运行单个测试，
+或者通过选择适当的选项按顺序运行所有测试。
+
+按Select键可以切换页面并允许测试"无效"操作码。
+请注意，这会使许多模拟器崩溃<cough>Nesten<cough>。
+
+测试完成后，如果通过，结果将显示"OK"，否则显示一个两位十六进制数字，表示某种失败。
+下面提供了失败及其原因的列表。要获得更详细的失败原因，
+您应该查看随本文档一起提供的.ASM文件。
+
+如果整页测试成功，"OK"将显示在页面第一个条目的旁边。
+如果一个或多个测试失败，则显示"Er"。
+
+---
+
+NSF播放器测试：
+
+这个ROM设置可以在NSF播放器内使用。它通过声音输出测试结果。<待完成>
+
+---
+
+模拟器作者：
+
+这个测试程序在"automation"模式下运行（即设置程序计数器为0c000h），
+将按顺序执行所有测试，并将测试结果存储在02h和03h位置。
+
+---
+
+最终说明：
+
+屏幕上显示的十六进制数字（或上述内存位置中存储的数字）是该组中最后一个失败的测试。
+这意味着一组或多组中可能有多个失败。这不是最好的解决方案，
+但由于进行了近400个测试，任何其他方式都会导致无法接受的内存占用。
+只要您的模拟器bug被修复，数字越来越小，就说明做得很好 :-)
+
+---
+
+测试失败代码及其含义：
+
+（仅字节02h）
+
+000h - 测试成功完成
+
+分支测试
+------------
+001h - BCS未能分支
+002h - BCS不应分支时分支了
+003h - BCC不应分支时分支了
+004h - BCC未能分支
+005h - BEQ未能分支
+006h - BEQ不应分支时分支了
+007h - BNE未能分支
+008h - BNE不应分支时分支了
+009h - BVS未能分支
+00Ah - BVC不应分支时分支了
+00Bh - BVC未能分支
+00Ch - BVS不应分支时分支了
+00Dh - BPL未能分支
+00Eh - BPL不应分支时分支了
+00Fh - BMI未能分支
+010h - BMI不应分支时分支了
+
+标志测试
+----------
+011h - PHP/标志失败（位置位）
+012h - PHP/标志失败（位清零）
+013h - PHP/标志失败（其他位状态）
+014h - PLP/标志失败（其他位状态）
+015h - PLP/标志失败（其他位状态）
+016h - PHA/PLA失败（PLA没有正确影响Z和N）
+017h - PHA/PLA失败（PLA没有正确影响Z和N）
+
+立即数指令测试
+---------------------------
+018h - ORA # 失败
+019h - ORA # 失败
+01Ah - AND # 失败
+01Bh - AND # 失败
+01Ch - EOR # 失败
+01Dh - EOR # 失败
+01Eh - ADC # 失败（溢出/进位问题）
+01Fh - ADC # 失败（十进制模式被打开）
+020h - ADC # 失败
+021h - ADC # 失败
+022h - ADC # 失败
+023h - LDA # 失败（没有正确设置N和Z）
+024h - LDA # 失败（没有正确设置N和Z）
+025h - CMP # 失败（标志搞乱了）
+026h - CMP # 失败（标志搞乱了）
+027h - CMP # 失败（标志搞乱了）
+028h - CMP # 失败（标志搞乱了）
+029h - CMP # 失败（标志搞乱了）
+02Ah - CMP # 失败（标志搞乱了）
+02Bh - CPY # 失败（标志搞乱了）
+02Ch - CPY # 失败（标志搞乱了）
+02Dh - CPY # 失败（标志搞乱了）
+02Eh - CPY # 失败（标志搞乱了）
+02Fh - CPY # 失败（标志搞乱了）
+030h - CPY # 失败（标志搞乱了）
+031h - CPY # 失败（标志搞乱了）
+032h - CPX # 失败（标志搞乱了）
+033h - CPX # 失败（标志搞乱了）
+034h - CPX # 失败（标志搞乱了）
+035h - CPX # 失败（标志搞乱了）
+036h - CPX # 失败（标志搞乱了）
+037h - CPX # 失败（标志搞乱了）
+038h - CPX # 失败（标志搞乱了）
+039h - LDX # 失败（没有正确设置N和Z）
+03Ah - LDX # 失败（没有正确设置N和Z）
+03Bh - LDY # 失败（没有正确设置N和Z）
+03Ch - LDY # 失败（没有正确设置N和Z）
+03Dh - 比较指令将结果存储在寄存器中（哎呀！）
+071h - SBC # 失败
+072h - SBC # 失败
+073h - SBC # 失败
+074h - SBC # 失败
+075h - SBC # 失败
+
+隐含指令测试
+-------------------------
+03Eh - INX/DEX/INY/DEY出了问题
+03Fh - INY/DEY搞乱了溢出或进位
+040h - INX/DEX搞乱了溢出或进位
+041h - TAY出了问题（改变了错误的寄存器，标志搞乱了）
+042h - TAX出了问题（改变了错误的寄存器，标志搞乱了）
+043h - TYA出了问题（改变了错误的寄存器，标志搞乱了）
+044h - TXA出了问题（改变了错误的寄存器，标志搞乱了）
+045h - TXS没有正确设置标志，或TSX不应该触摸标志却触摸了
+
+堆栈测试
+-----------
+046h - 弹出了错误的数据，或数据不在堆栈的正确位置
+047h - JSR没有按预期工作
+048h - RTS/JSR不应该影响标志
+049h - RTI/RTS在手动推送返回地址/数据时没有正确工作
+
+累加器测试
+-----------------
+04Ah - LSR A 失败
+04Bh - ASL A 失败
+04Ch - ROR A 失败
+04Dh - ROL A 失败
+
+(间接,X)测试
+------------------
+058h - LDA没有加载它期望加载的数据
+059h - STA没有在应该的地方存储数据
+05Ah - ORA失败
+05Bh - ORA失败
+05Ch - AND失败
+05Dh - AND失败
+05Eh - EOR失败
+05Fh - EOR失败
+060h - ADC失败
+061h - ADC失败
+062h - ADC失败
+063h - ADC失败
+064h - ADC失败
+065h - CMP失败
+066h - CMP失败
+067h - CMP失败
+068h - CMP失败
+069h - CMP失败
+06Ah - CMP失败
+06Bh - CMP失败
+06Ch - SBC失败
+06Dh - SBC失败
+06Eh - SBC失败
+06Fh - SBC失败
+070h - SBC失败
+
+零页测试
+--------------
+076h - LDA没有正确设置标志
+077h - STA影响了它不应该影响的标志
+078h - LDY没有正确设置标志
+079h - STY影响了它不应该影响的标志
+07Ah - LDX没有正确设置标志
+07Bh - STX影响了它不应该影响的标志
+07Ch - BIT失败
+07Dh - BIT失败
+07Eh - ORA失败
+07Fh - ORA失败
+080h - AND失败
+081h - AND失败
+082h - EOR失败
+083h - EOR失败
+084h - ADC失败
+085h - ADC失败
+086h - ADC失败
+087h - ADC失败
+088h - ADC失败
+089h - CMP失败
+08Ah - CMP失败
+08Bh - CMP失败
+08Ch - CMP失败
+08Dh - CMP失败
+08Eh - CMP失败
+08Fh - CMP失败
+090h - SBC失败
+091h - SBC失败
+092h - SBC失败
+093h - SBC失败
+094h - SBC失败
+095h - CPX失败
+096h - CPX失败
+097h - CPX失败
+098h - CPX失败
+099h - CPX失败
+09Ah - CPX失败
+09Bh - CPX失败
+09Ch - CPY失败
+09Dh - CPY失败
+09Eh - CPY失败
+09Fh - CPY失败
+0A0h - CPY失败
+0A1h - CPY失败
+0A2h - CPY失败
+0A3h - LSR失败
+0A4h - LSR失败
+0A5h - ASL失败
+0A6h - ASL失败
+0A7h - ROL失败
+0A8h - ROL失败
+0A9h - ROR失败
+0AAh - ROR失败
+0ABh - INC失败
+0ACh - INC失败
+0ADh - DEC失败
+0AEh - DEC失败
+0AFh - DEC失败
+
+绝对寻址测试
+--------------
+0B0h - LDA没有正确设置标志
+0B1h - STA影响了它不应该影响的标志
+0B2h - LDY没有正确设置标志
+0B3h - STY影响了它不应该影响的标志
+0B4h - LDX没有正确设置标志
+0B5h - STX影响了它不应该影响的标志
+0B6h - BIT失败
+0B7h - BIT失败
+0B8h - ORA失败
+0B9h - ORA失败
+0BAh - AND失败
+0BBh - AND失败
+0BCh - EOR失败
+0BDh - EOR失败
+0BEh - ADC失败
+0BFh - ADC失败
+0C0h - ADC失败
+0C1h - ADC失败
+0C2h - ADC失败
+0C3h - CMP失败
+0C4h - CMP失败
+0C5h - CMP失败
+0C6h - CMP失败
+0C7h - CMP失败
+0C8h - CMP失败
+0C9h - CMP失败
+0CAh - SBC失败
+0CBh - SBC失败
+0CCh - SBC失败
+0CDh - SBC失败
+0CEh - SBC失败
+0CFh - CPX失败
+0D0h - CPX失败
+0D1h - CPX失败
+0D2h - CPX失败
+0D3h - CPX失败
+0D4h - CPX失败
+0D5h - CPX失败
+0D6h - CPY失败
+0D7h - CPY失败
+0D8h - CPY失败
+0D9h - CPY失败
+0DAh - CPY失败
+0DBh - CPY失败
+0DCh - CPY失败
+0DDh - LSR失败
+0DEh - LSR失败
+0DFh - ASL失败
+0E0h - ASL失败
+0E1h - ROR失败
+0E2h - ROR失败
+0E3h - ROL失败
+0E4h - ROL失败
+0E5h - INC失败
+0E6h - INC失败
+0E7h - DEC失败
+0E8h - DEC失败
+0E9h - DEC失败
+
+(间接),Y测试
+------------------
+0EAh - LDA没有加载它应该加载的内容
+0EBh - 读取位置应该从ffffh回绕到0000h
+0ECh - 零页地址应该回绕
+0EDh - ORA失败
+0EEh - ORA失败
+0EFh - AND失败
+0F0h - AND失败
+0F1h - EOR失败
+0F2h - EOR失败
+0F3h - ADC失败
+0F4h - ADC失败
+0F5h - ADC失败
+0F6h - ADC失败
+0F7h - ADC失败
+0F8h - CMP失败
+0F9h - CMP失败
+0FAh - CMP失败
+0FBh - CMP失败
+0FCh - CMP失败
+0FDh - CMP失败
+0FEh - CMP失败
+
+（错误字节位置03h从这里开始）
+
+000h - 没有错误，所有测试通过
+001h - SBC失败
+002h - SBC失败
+003h - SBC失败
+004h - SBC失败
+005h - SBC失败
+006h - STA失败
+007h - JMP ()数据读取没有正确回绕（在65C02上会失败）
+
+零页,X测试
+----------------
+008h - LDY,X失败
+009h - LDY,X失败
+00Ah - STY,X失败
+00Bh - ORA失败
+00Ch - ORA失败
+00Dh - AND失败
+00Eh - AND失败
+00Fh - EOR失败
+010h - EOR失败
+011h - ADC失败
+012h - ADC失败
+013h - ADC失败
+014h - ADC失败
+015h - ADC失败
+016h - CMP失败
+017h - CMP失败
+018h - CMP失败
+019h - CMP失败
+01Ah - CMP失败
+01Bh - CMP失败
+01Ch - CMP失败
+01Dh - SBC失败
+01Eh - SBC失败
+01Fh - SBC失败
+020h - SBC失败
+021h - SBC失败
+022h - LDA失败
+023h - LDA失败
+024h - STA失败
+025h - LSR失败
+026h - LSR失败
+027h - ASL失败
+028h - ASL失败
+029h - ROR失败
+02Ah - ROR失败
+02Bh - ROL失败
+02Ch - ROL失败
+02Dh - INC失败
+02Eh - INC失败
+02Fh - DEC失败
+030h - DEC失败
+031h - DEC失败
+032h - LDX,Y失败
+033h - LDX,Y失败
+034h - STX,Y失败
+035h - STX,Y失败
+
+绝对,Y测试
+----------------
+036h - LDA失败
+037h - LDA未能正确从ffffh回绕到0000h
+038h - LDA失败，页面跨越
+039h - ORA失败
+03Ah - ORA失败
+03Bh - AND失败
+03Ch - AND失败
+03Dh - EOR失败
+03Eh - EOR失败
+03Fh - ADC失败
+040h - ADC失败
+041h - ADC失败
+042h - ADC失败
+043h - ADC失败
+044h - CMP失败
+045h - CMP失败
+046h - CMP失败
+047h - CMP失败
+048h - CMP失败
+049h - CMP失败
+04Ah - CMP失败
+04Bh - SBC失败
+04Ch - SBC失败
+04Dh - SBC失败
+04Eh - SBC失败
+04Fh - SBC失败
+050h - STA失败
+
+绝对,X测试
+----------------
+051h - LDY,X失败
+052h - LDY,X失败（没有页面跨越）
+053h - ORA失败
+054h - ORA失败
+055h - AND失败
+056h - AND失败
+057h - EOR失败
+058h - EOR失败
+059h - ADC失败
+05Ah - ADC失败
+05Bh - ADC失败
+05Ch - ADC失败
+05Dh - ADC失败
+05Eh - CMP失败
+05Fh - CMP失败
+060h - CMP失败
+061h - CMP失败
+062h - CMP失败
+063h - CMP失败
+064h - CMP失败
+065h - SBC失败
+066h - SBC失败
+067h - SBC失败
+068h - SBC失败
+069h - SBC失败
+06Ah - LDA失败
+06Bh - LDA失败（没有页面跨越）
+06Ch - STA失败
+06Dh - LSR失败
+06Eh - LSR失败
+06Fh - ASL失败
+070h - ASL失败
+071h - ROR失败
+072h - ROR失败
+073h - ROL失败
+074h - ROL失败
+075h - INC失败
+076h - INC失败
+077h - DEC失败
+078h - DEC失败
+079h - DEC失败
+07Ah - LDX,Y失败
+07Bh - LDX,Y失败
+
+------------------------------------
+
+无效操作码测试...除非另有说明，所有错误都报告在字节03h中
+
+NOP - "无效"操作码测试（错误字节02h）
+---------------------------------------------
+04Eh - absolute,X NOP少于3字节
+04Fh - 隐含NOP影响寄存器/标志
+050h - ZP,X NOP少于2字节
+051h - 绝对NOP少于3字节
+052h - ZP NOP少于2字节
+053h - absolute,X NOP少于3字节
+054h - 隐含NOP影响寄存器/标志
+055h - ZP,X NOP少于2字节
+056h - 绝对NOP少于3字节
+057h - ZP NOP少于2字节
+
+LAX - "无效"操作码测试
+----------------------------
+07Ch - LAX (indr,x) 失败
+07Dh - LAX (indr,x) 失败
+07Eh - LAX零页失败
+07Fh - LAX零页失败
+080h - LAX绝对失败
+081h - LAX绝对失败
+082h - LAX (indr),y 失败
+083h - LAX (indr),y 失败
+084h - LAX zp,y 失败
+085h - LAX zp,y 失败
+086h - LAX abs,y 失败
+087h - LAX abs,y 失败
+
+SAX - "无效"操作码测试
+----------------------------
+088h - SAX (indr,x) 失败
+089h - SAX (indr,x) 失败
+08Ah - SAX零页失败
+08Bh - SAX零页失败
+08Ch - SAX绝对失败
+08Dh - SAX绝对失败
+08Eh - SAX zp,y 失败
+08Fh - SAX zp,y 失败
+ 
+SBC - "无效"操作码测试
+---------------------------
+090h - SBC失败
+091h - SBC失败
+092h - SBC失败
+093h - SBC失败
+094h - SBC失败
+
+DCP - "无效"操作码测试
+----------------------------
+095h - DCP (indr,x) 失败
+096h - DCP (indr,x) 失败
+097h - DCP (indr,x) 失败
+098h - DCP零页失败
+099h - DCP零页失败
+09Ah - DCP零页失败
+09Bh - DCP绝对失败
+09Ch - DCP绝对失败
+09Dh - DCP绝对失败
+09Eh - DCP (indr),y 失败
+09Fh - DCP (indr),y 失败
+0A0h - DCP (indr),y 失败
+0A1h - DCP zp,x 失败
+0A2h - DCP zp,x 失败
+0A3h - DCP zp,x 失败
+0A4h - DCP abs,y 失败
+0A5h - DCP abs,y 失败
+0A6h - DCP abs,y 失败
+0A7h - DCP abs,x 失败
+0A8h - DCP abs,x 失败
+0A9h - DCP abs,x 失败
+
+ISB - "无效"操作码测试
+----------------------------
+0AAh - ISB (indr,x) 失败
+0ABh - ISB (indr,x) 失败
+0ACh - ISB (indr,x) 失败
+0ADh - ISB零页失败
+0AEh - ISB零页失败
+0AFh - ISB零页失败
+0B0h - ISB绝对失败
+0B1h - ISB绝对失败
+0B2h - ISB绝对失败
+0B3h - ISB (indr),y 失败
+0B4h - ISB (indr),y 失败
+0B5h - ISB (indr),y 失败
+0B6h - ISB zp,x 失败
+0B7h - ISB zp,x 失败
+0B8h - ISB zp,x 失败
+0B9h - ISB abs,y 失败
+0BAh - ISB abs,y 失败
+0BBh - ISB abs,y 失败
+0BCh - ISB abs,x 失败
+0BDh - ISB abs,x 失败
+0BEh - ISB abs,x 失败
+
+SLO - "无效"操作码测试
+----------------------------
+0BFh - SLO (indr,x) 失败
+0C0h - SLO (indr,x) 失败
+0C1h - SLO (indr,x) 失败
+0C2h - SLO零页失败
+0C3h - SLO零页失败
+0C4h - SLO零页失败
+0C5h - SLO绝对失败
+0C6h - SLO绝对失败
+0C7h - SLO绝对失败
+0C8h - SLO (indr),y 失败
+0C9h - SLO (indr),y 失败
+0CAh - SLO (indr),y 失败
+0CBh - SLO zp,x 失败
+0CCh - SLO zp,x 失败
+0CDh - SLO zp,x 失败
+0CEh - SLO abs,y 失败
+0CFh - SLO abs,y 失败
+0D0h - SLO abs,y 失败
+0D1h - SLO abs,x 失败
+0D2h - SLO abs,x 失败
+0D3h - SLO abs,x 失败
+
+RLA - "无效"操作码测试
+----------------------------
+0D4h - RLA (indr,x) 失败
+0D5h - RLA (indr,x) 失败
+0D6h - RLA (indr,x) 失败
+0D7h - RLA零页失败
+0D8h - RLA零页失败
+0D9h - RLA零页失败
+0DAh - RLA绝对失败
+0DBh - RLA绝对失败
+0DCh - RLA绝对失败
+0DDh - RLA (indr),y 失败
+0DEh - RLA (indr),y 失败
+0DFh - RLA (indr),y 失败
+0E0h - RLA zp,x 失败
+0E1h - RLA zp,x 失败
+0E2h - RLA zp,x 失败
+0E3h - RLA abs,y 失败
+0E4h - RLA abs,y 失败
+0E5h - RLA abs,y 失败
+0E6h - RLA abs,x 失败
+0E7h - RLA abs,x 失败
+0E8h - RLA abs,x 失败
+
+SRE - "无效"操作码测试
+----------------------------
+0E8h - SRE (indr,x) 失败
+0EAh - SRE (indr,x) 失败
+0EBh - SRE (indr,x) 失败
+0ECh - SRE零页失败
+0EDh - SRE零页失败
+0EEh - SRE零页失败
+0EFh - SRE绝对失败
+0F0h - SRE绝对失败
+0F1h - SRE绝对失败
+0F2h - SRE (indr),y 失败
+0F3h - SRE (indr),y 失败
+0F4h - SRE (indr),y 失败
+0F5h - SRE zp,x 失败
+0F6h - SRE zp,x 失败
+0F7h - SRE zp,x 失败
+0F8h - SRE abs,y 失败
+0F9h - SRE abs,y 失败
+0FAh - SRE abs,y 失败
+0FBh - SRE abs,x 失败
+0FCh - SRE abs,x 失败
+0FDh - SRE abs,x 失败
+
+
+RRA - "无效"操作码测试
+----------------------------
+001h - RRA (indr,x) 失败
+002h - RRA (indr,x) 失败
+003h - RRA (indr,x) 失败
+004h - RRA零页失败
+005h - RRA零页失败
+006h - RRA零页失败
+007h - RRA绝对失败
+008h - RRA绝对失败
+009h - RRA绝对失败
+00Ah - RRA (indr),y 失败
+00Bh - RRA (indr),y 失败
+00Ch - RRA (indr),y 失败
+00Dh - RRA zp,x 失败
+00Eh - RRA zp,x 失败
+00Fh - RRA zp,x 失败
+010h - RRA abs,y 失败
+011h - RRA abs,y 失败
+012h - RRA abs,y 失败
+013h - RRA abs,x 失败
+014h - RRA abs,x 失败
+015h - RRA abs,x 失败
+
+
+
+
+
+待办事项：检查CPU是否缺少十进制模式

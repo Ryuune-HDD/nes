@@ -307,7 +307,6 @@ uint8_t nes_load(const char* pname)
 	// nes_sound_open(0,APU_SAMPLE_RATE); //初始化播放设备
 	LOG("模拟器初始化成功\n");
 	nes_emulate_frame(); //进入NES模拟器主循环
-
 	// nes_sound_close(); //关闭声音输出
 	nes_sram_free(); //释放内存
 	return 0;
@@ -329,12 +328,10 @@ void nes_get_gamepadval(void)
 	if (GetAsyncKeyState('W') & 0x8000)
 	{
 		PADdata0 |= 0x10; // UP
-		LOG("PADdata0 :%X\n", PADdata0);
 	}
 	if (GetAsyncKeyState('S') & 0x8000)
 	{
 		PADdata0 |= 0x20; // DOWN
-		LOG("PADdata0 :%X\n", PADdata0);
 	}
 	if (GetAsyncKeyState('A') & 0x8000)
 	{
