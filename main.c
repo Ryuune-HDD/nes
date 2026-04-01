@@ -12,50 +12,44 @@ int main()
 #endif
     // pcm_init(22050);
 
+    // === CPU基础测试 ===
     // nes_load("../test_rom/nestest/nestest.nes");
 
-    // === instr_misc ===
-    // nes_load("../test_rom/instr_misc/instr_misc.nes");
-    // nes_load("../test_rom/instr_misc/rom_singles/01-abs_x_wrap.nes");
-    // nes_load("../test_rom/instr_misc/rom_singles/02-branch_wrap.nes");
-    // nes_load("../test_rom/instr_misc/rom_singles/03-dummy_reads.nes");
-    // nes_load("../test_rom/instr_misc/rom_singles/04-dummy_reads_apu.nes");
-
     // === instr_test-v5 ===
-    // nes_load("../test_rom/instr_test-v5/all_instrs.nes");
+    // 1. 测试所有指令包括非法指令
+    nes_load("../test_rom/instr_test-v5/all_instrs.nes");
+    // 2. 只测试官方指令
     // nes_load("../test_rom/instr_test-v5/official_only.nes");
-    // nes_load("../test_rom/instr_test-v5/rom_singles/01-basics.nes");
-    // nes_load("../test_rom/instr_test-v5/rom_singles/02-implied.nes");
-    // nes_load("../test_rom/instr_test-v5/rom_singles/03-immediate.nes");
-    // nes_load("../test_rom/instr_test-v5/rom_singles/04-zero_page.nes");
-    // nes_load("../test_rom/instr_test-v5/rom_singles/05-zp_xy.nes");
-    // nes_load("../test_rom/instr_test-v5/rom_singles/06-absolute.nes");
-    // nes_load("../test_rom/instr_test-v5/rom_singles/07-abs_xy.nes");
-    // nes_load("../test_rom/instr_test-v5/rom_singles/08-ind_x.nes");
-    // nes_load("../test_rom/instr_test-v5/rom_singles/09-ind_y.nes");
-    // nes_load("../test_rom/instr_test-v5/rom_singles/10-branches.nes");
-    // nes_load("../test_rom/instr_test-v5/rom_singles/11-stack.nes");
-    // nes_load("../test_rom/instr_test-v5/rom_singles/12-jmp_jsr.nes");
-    // nes_load("../test_rom/instr_test-v5/rom_singles/13-rts.nes");
-    // nes_load("../test_rom/instr_test-v5/rom_singles/14-rti.nes");
-    // nes_load("../test_rom/instr_test-v5/rom_singles/15-brk.nes");
-    // nes_load("../test_rom/instr_test-v5/rom_singles/16-special.nes");
 
-    // === nes_instr_test ===
-    // nes_load("../test_rom/nes_instr_test/rom_singles/01-implied.nes");
-    // nes_load("../test_rom/nes_instr_test/rom_singles/02-immediate.nes");
-    // nes_load("../test_rom/nes_instr_test/rom_singles/03-zero_page.nes");
-    // nes_load("../test_rom/nes_instr_test/rom_singles/04-zp_xy.nes");
-    // nes_load("../test_rom/nes_instr_test/rom_singles/05-absolute.nes");
-    // nes_load("../test_rom/nes_instr_test/rom_singles/06-abs_xy.nes");
-    // nes_load("../test_rom/nes_instr_test/rom_singles/07-ind_x.nes");
-    // nes_load("../test_rom/nes_instr_test/rom_singles/08-ind_y.nes");
-    // nes_load("../test_rom/nes_instr_test/rom_singles/09-branches.nes");
-    // nes_load("../test_rom/nes_instr_test/rom_singles/10-stack.nes");
-    // nes_load("../test_rom/nes_instr_test/rom_singles/11-special.nes");
+    // === 所有官方/非官方指令的周期计数测试 ===
+    // nes_load("../test_rom/cpu_timing_test6/cpu_timing_test.nes");
+
+    // === 所有指令的时序测试 ===
+    // nes_load("../test_rom/instr_timing/instr_timing.nes");
+    // nes_load("../test_rom/instr_timing/rom_singles/1-instr_timing.nes");
+    // nes_load("../test_rom/instr_timing/rom_singles/2-branch_timing.nes");
+
+    // === APU基础测试 ===
+    // nes_load("../test_rom/apu_test/apu_test.nes");
+    // 1. 长度计数器测试
+    // nes_load("../test_rom/apu_test/rom_singles/1-len_ctr.nes");
+    // 2. 长度计数器查找表测试
+    // nes_load("../test_rom/apu_test/rom_singles/2-len_table.nes");
+    // 3. IRQ 标志测试
+    // nes_load("../test_rom/apu_test/rom_singles/3-irq_flag.nes");
+    // 4. 抖动测试 (jitter)
+    // nes_load("../test_rom/apu_test/rom_singles/4-jitter.nes");
+    // 5. 长度计数器时序测试
+    // nes_load("../test_rom/apu_test/rom_singles/5-len_timing.nes");
+    // 6. IRQ 标志时序测试
+    // nes_load("../test_rom/apu_test/rom_singles/6-irq_flag_timing.nes");
+    // 7. DMC 基础测试
+    // nes_load("../test_rom/apu_test/rom_singles/7-dmc_basics.nes");
+    // 8. DMC 速率测试
+    // nes_load("../test_rom/apu_test/rom_singles/8-dmc_rates.nes");
 
     // mapper0
-    nes_load("../rom/LanMAster.nes");
+    nes_load("../rom/LanMaster.nes");
     // nes_load("../rom/cjml.nes");
     // nes_load("../rom/tkdz.nes");
     // nes_load("../rom/dzk.nes");
@@ -74,16 +68,16 @@ int main()
     // nes_load("../rom/elsfk.nes");
 
     // // mapper4
-    // nes_load("../rom/yjs.nes");
+    nes_load("../rom/yjs.nes");
+
+    // aduio测试
+    // pcm_init(16000);
+    // pcm_play_file("../rom/rssq.pcm");
     //
-    // // aduio测试
-    // // pcm_init(8000);
-    // // pcm_play_file("../rom/rssq.pcm");
-    // //
-    // // while (1)
-    // // {
-    // //     Sleep(100);
-    // // }
+    // while (1)
+    // {
+    //     Sleep(100);
+    // }
 }
 
 

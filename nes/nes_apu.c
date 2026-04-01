@@ -1230,7 +1230,6 @@ void apu_soundoutput(void)
 			wave_buffers[i] = 0; //是暂停状态输出的重复无效数据,直接修改为0.从而不输出杂音.
 	}
 	clocks = 0;
-	// nes_apu_fill_buffer(0, wave_buffers);
 }
 
 

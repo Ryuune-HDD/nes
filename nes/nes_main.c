@@ -304,21 +304,12 @@ uint8_t nes_load(const char* pname)
 	Mapper_Init(); //map初始化
 	PPU_reset(); //ppu复位
 	apu_init(); //apu初始化
-	// nes_sound_open(0,APU_SAMPLE_RATE); //初始化播放设备
 	LOG("模拟器初始化成功\n");
 	nes_emulate_frame(); //进入NES模拟器主循环
-	// nes_sound_close(); //关闭声音输出
 	nes_sram_free(); //释放内存
 	return 0;
 }
 
-//设置游戏显示窗口
-void nes_set_window(void)
-{
-	// TFT_Show_window(32, 0, 256, 240);
-}
-
-extern void KEYBRD_FCPAD_Decode(uint8_t* fcbuf, uint8_t mode);
 
 //读取游戏手柄数据
 void nes_get_gamepadval(void)
@@ -363,8 +354,6 @@ void nes_get_gamepadval(void)
 void nes_emulate_frame(void)
 {
 	uint8_t nes_frame = 0;
-	//TIM3_Int_Init(10000-1,8400-1);//启动TIM3 ,1s中断一次
-	nes_set_window(); //设置窗口
 	while (1)
 	{
 		Sleep(1);
@@ -372,7 +361,7 @@ void nes_emulate_frame(void)
 		PPU_start_frame();
 		for (NES_scanline = 0; NES_scanline < 240; NES_scanline++)
 		{
-			run6502(113 * 256);
+			run6502(113);
 			NES_Mapper->HSync(NES_scanline);
 			//扫描一行
 			if (nes_frame == 0)
@@ -382,33 +371,28 @@ void nes_emulate_frame(void)
 		}
 		NES_scanline = 240;
 		nes_get_gamepadval();
-		run6502(113 * 256); //运行1线
+		run6502(113); //运行1线
 		NES_Mapper->HSync(NES_scanline);
 		start_vblank();
 		if (NMI_enabled())
 		{
 			cpunmi = 1;
-			run6502(7 * 256); //运行中断
+			run6502(7); //运行中断
 		}
 		NES_Mapper->VSync();
 		// LINES 242-261
 		for (NES_scanline = 241; NES_scanline < 262; NES_scanline++)
 		{
-			run6502(113 * 256);
+			run6502(113);
 			NES_Mapper->HSync(NES_scanline);
 		}
 		end_vblank();
-		apu_soundoutput(); //输出游戏声音
+		// apu_soundoutput(); //输出游戏声音
 		nes_frame_cnt++;
 		nes_frame++;
-		nes_set_window(); //重新设置窗口
 		if (nes_frame > NES_SKIP_FRAME)nes_frame = 0; //跳帧
 		if (system_task_return) break; //TPAD返回
 	}
-
-	// LCD显示
-	//恢复屏幕窗口
-	//LCD_SettWindow(0, 0, 239, 319);
 }
 
 //在6502.s里面被调用
@@ -416,45 +400,3 @@ void debug_6502(uint16_t reg0, uint8_t reg1)
 {
 	LOG("6502 error:%x,%d\r\n", reg0, reg1);
 }
-
-//////////////////////////////////////////////////////////////////////////////////
-//nes,音频输出支持部分
-uint8_t nestransferend = 1; //i2s传输完成标志
-uint8_t neswitchbuf = 0; //i2sbufx指示标志
-//I2S音频播放回调函数
-// void HAL_I2S_TxCpltCallback(I2S_HandleTypeDef *hi2s)
-// {
-// //	HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_6);
-// 	nestransferend = 1;//complete
-// }
-
-//NES音频输出到I2S缓存
-void nes_apu_fill_buffer(int samples, uint16_t* wavebuf)
-{
-	if (wavebuf == NULL || i2sbuf1 == NULL)
-	{
-		return;
-	}
-	for (int i = 0; i < APU_PCMBUF_SIZE; i++)
-	{
-		i2sbuf1[2 * i] = wavebuf[i];
-		i2sbuf1[2 * i + 1] = wavebuf[i];
-	}
-	pcm_submit_buffer((const uint16_t*)i2sbuf1, APU_PCMBUF_SIZE);
-}
-
-
-int nes_sound_open(int samples_per_sync, int sample_rate)
-{
-	// HAL_I2S_Transmit_DMA(&hi2s2, i2sbuf1, APU_PCMBUF_SIZE*2);
-	pcm_init(sample_rate);
-	return 1;
-}
-
-void nes_sound_close(void)
-{
-	// HAL_I2S_DMAStop(&hi2s2);
-}
-
-
-

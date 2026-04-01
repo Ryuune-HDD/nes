@@ -34,8 +34,6 @@ static const uint8_t cycles_map[256] = {
 	2, 6, 2, 8, 3, 3, 5, 5, 2, 2, 2, 2, 4, 4, 6, 6,
 	2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 6, 7
 };
-typedef void (*OpFunc)(void);
-static OpFunc op_handlers[256][2];
 
 uint8_t K6502_Read(uint16_t addr)
 {
@@ -189,7 +187,7 @@ static void am_IMM(void)
 	PC++;
 }
 
-static void am_ZP(void)
+static void am__ZP(void)
 {
 	temp16 = K6502_Read(PC++);
 }
@@ -684,7 +682,7 @@ static void op_TYA(void)
 #define ENABLE_ILLEGAL_OPCODE 1
 #if ENABLE_ILLEGAL_OPCODE
 // NOP Read: NOPs that read memory (side effects)
-static void op_NOP_RD(void)
+static void op_NRD(void)
 {
 	if (g_page_crossed)
 	{
@@ -895,543 +893,142 @@ static void op_KIL(void)
 	PC--; // Stay on current instruction
 }
 #endif
-static void init_op_handlers(void)
-{
-	int i;
-	for (i = 0; i < 256; i++)
-	{
-		op_handlers[i][0] = am_IMP;
-		op_handlers[i][1] = op_NOP;
-	}
-	// Legal Opcodes
-	op_handlers[0x00][0] = am_IMP;
-	op_handlers[0x00][1] = op_BRK;
-	op_handlers[0x01][0] = am_IZX;
-	op_handlers[0x01][1] = op_ORA;
-	op_handlers[0x05][0] = am_ZP;
-	op_handlers[0x05][1] = op_ORA;
-	op_handlers[0x06][0] = am_ZP;
-	op_handlers[0x06][1] = op_ASL;
-	op_handlers[0x08][0] = am_IMP;
-	op_handlers[0x08][1] = op_PHP;
-	op_handlers[0x09][0] = am_IMM;
-	op_handlers[0x09][1] = op_ORA;
-	op_handlers[0x0A][0] = am_ACC;
-	op_handlers[0x0A][1] = op_ASL;
-	op_handlers[0x0D][0] = am_ABS;
-	op_handlers[0x0D][1] = op_ORA;
-	op_handlers[0x0E][0] = am_ABS;
-	op_handlers[0x0E][1] = op_ASL;
-	op_handlers[0x10][0] = am_REL;
-	op_handlers[0x10][1] = op_BPL;
-	op_handlers[0x11][0] = am_IZY;
-	op_handlers[0x11][1] = op_ORA;
-	op_handlers[0x15][0] = am_ZPX;
-	op_handlers[0x15][1] = op_ORA;
-	op_handlers[0x16][0] = am_ZPX;
-	op_handlers[0x16][1] = op_ASL;
-	op_handlers[0x18][0] = am_IMP;
-	op_handlers[0x18][1] = op_CLC;
-	op_handlers[0x19][0] = am_ABY;
-	op_handlers[0x19][1] = op_ORA;
-	op_handlers[0x1D][0] = am_ABX;
-	op_handlers[0x1D][1] = op_ORA;
-	op_handlers[0x1E][0] = am_ABX;
-	op_handlers[0x1E][1] = op_ASL;
-	op_handlers[0x20][0] = am_ABS;
-	op_handlers[0x20][1] = op_JSR;
-	op_handlers[0x21][0] = am_IZX;
-	op_handlers[0x21][1] = op_AND;
-	op_handlers[0x24][0] = am_ZP;
-	op_handlers[0x24][1] = op_BIT;
-	op_handlers[0x25][0] = am_ZP;
-	op_handlers[0x25][1] = op_AND;
-	op_handlers[0x26][0] = am_ZP;
-	op_handlers[0x26][1] = op_ROL;
-	op_handlers[0x28][0] = am_IMP;
-	op_handlers[0x28][1] = op_PLP;
-	op_handlers[0x29][0] = am_IMM;
-	op_handlers[0x29][1] = op_AND;
-	op_handlers[0x2A][0] = am_ACC;
-	op_handlers[0x2A][1] = op_ROL;
-	op_handlers[0x2C][0] = am_ABS;
-	op_handlers[0x2C][1] = op_BIT;
-	op_handlers[0x2D][0] = am_ABS;
-	op_handlers[0x2D][1] = op_AND;
-	op_handlers[0x2E][0] = am_ABS;
-	op_handlers[0x2E][1] = op_ROL;
-	op_handlers[0x30][0] = am_REL;
-	op_handlers[0x30][1] = op_BMI;
-	op_handlers[0x31][0] = am_IZY;
-	op_handlers[0x31][1] = op_AND;
-	op_handlers[0x35][0] = am_ZPX;
-	op_handlers[0x35][1] = op_AND;
-	op_handlers[0x36][0] = am_ZPX;
-	op_handlers[0x36][1] = op_ROL;
-	op_handlers[0x38][0] = am_IMP;
-	op_handlers[0x38][1] = op_SEC;
-	op_handlers[0x39][0] = am_ABY;
-	op_handlers[0x39][1] = op_AND;
-	op_handlers[0x3D][0] = am_ABX;
-	op_handlers[0x3D][1] = op_AND;
-	op_handlers[0x3E][0] = am_ABX;
-	op_handlers[0x3E][1] = op_ROL;
-	op_handlers[0x40][0] = am_IMP;
-	op_handlers[0x40][1] = op_RTI;
-	op_handlers[0x41][0] = am_IZX;
-	op_handlers[0x41][1] = op_EOR;
-	op_handlers[0x45][0] = am_ZP;
-	op_handlers[0x45][1] = op_EOR;
-	op_handlers[0x46][0] = am_ZP;
-	op_handlers[0x46][1] = op_LSR;
-	op_handlers[0x48][0] = am_IMP;
-	op_handlers[0x48][1] = op_PHA;
-	op_handlers[0x49][0] = am_IMM;
-	op_handlers[0x49][1] = op_EOR;
-	op_handlers[0x4A][0] = am_ACC;
-	op_handlers[0x4A][1] = op_LSR;
-	op_handlers[0x4C][0] = am_ABS;
-	op_handlers[0x4C][1] = op_JMP;
-	op_handlers[0x4D][0] = am_ABS;
-	op_handlers[0x4D][1] = op_EOR;
-	op_handlers[0x4E][0] = am_ABS;
-	op_handlers[0x4E][1] = op_LSR;
-	op_handlers[0x50][0] = am_REL;
-	op_handlers[0x50][1] = op_BVC;
-	op_handlers[0x51][0] = am_IZY;
-	op_handlers[0x51][1] = op_EOR;
-	op_handlers[0x55][0] = am_ZPX;
-	op_handlers[0x55][1] = op_EOR;
-	op_handlers[0x56][0] = am_ZPX;
-	op_handlers[0x56][1] = op_LSR;
-	op_handlers[0x58][0] = am_IMP;
-	op_handlers[0x58][1] = op_CLI;
-	op_handlers[0x59][0] = am_ABY;
-	op_handlers[0x59][1] = op_EOR;
-	op_handlers[0x5D][0] = am_ABX;
-	op_handlers[0x5D][1] = op_EOR;
-	op_handlers[0x5E][0] = am_ABX;
-	op_handlers[0x5E][1] = op_LSR;
-	op_handlers[0x60][0] = am_IMP;
-	op_handlers[0x60][1] = op_RTS;
-	op_handlers[0x61][0] = am_IZX;
-	op_handlers[0x61][1] = op_ADC;
-	op_handlers[0x65][0] = am_ZP;
-	op_handlers[0x65][1] = op_ADC;
-	op_handlers[0x66][0] = am_ZP;
-	op_handlers[0x66][1] = op_ROR;
-	op_handlers[0x68][0] = am_IMP;
-	op_handlers[0x68][1] = op_PLA;
-	op_handlers[0x69][0] = am_IMM;
-	op_handlers[0x69][1] = op_ADC;
-	op_handlers[0x6A][0] = am_ACC;
-	op_handlers[0x6A][1] = op_ROR;
-	op_handlers[0x6C][0] = am_IND;
-	op_handlers[0x6C][1] = op_JMP;
-	op_handlers[0x6D][0] = am_ABS;
-	op_handlers[0x6D][1] = op_ADC;
-	op_handlers[0x6E][0] = am_ABS;
-	op_handlers[0x6E][1] = op_ROR;
-	op_handlers[0x70][0] = am_REL;
-	op_handlers[0x70][1] = op_BVS;
-	op_handlers[0x71][0] = am_IZY;
-	op_handlers[0x71][1] = op_ADC;
-	op_handlers[0x75][0] = am_ZPX;
-	op_handlers[0x75][1] = op_ADC;
-	op_handlers[0x76][0] = am_ZPX;
-	op_handlers[0x76][1] = op_ROR;
-	op_handlers[0x78][0] = am_IMP;
-	op_handlers[0x78][1] = op_SEI;
-	op_handlers[0x79][0] = am_ABY;
-	op_handlers[0x79][1] = op_ADC;
-	op_handlers[0x7D][0] = am_ABX;
-	op_handlers[0x7D][1] = op_ADC;
-	op_handlers[0x7E][0] = am_ABX;
-	op_handlers[0x7E][1] = op_ROR;
-	op_handlers[0x81][0] = am_IZX;
-	op_handlers[0x81][1] = op_STA;
-	op_handlers[0x84][0] = am_ZP;
-	op_handlers[0x84][1] = op_STY;
-	op_handlers[0x85][0] = am_ZP;
-	op_handlers[0x85][1] = op_STA;
-	op_handlers[0x86][0] = am_ZP;
-	op_handlers[0x86][1] = op_STX;
-	op_handlers[0x88][0] = am_IMP;
-	op_handlers[0x88][1] = op_DEY;
-	op_handlers[0x8A][0] = am_IMP;
-	op_handlers[0x8A][1] = op_TXA;
-	op_handlers[0x8C][0] = am_ABS;
-	op_handlers[0x8C][1] = op_STY;
-	op_handlers[0x8D][0] = am_ABS;
-	op_handlers[0x8D][1] = op_STA;
-	op_handlers[0x8E][0] = am_ABS;
-	op_handlers[0x8E][1] = op_STX;
-	op_handlers[0x90][0] = am_REL;
-	op_handlers[0x90][1] = op_BCC;
-	op_handlers[0x91][0] = am_IZY;
-	op_handlers[0x91][1] = op_STA;
-	op_handlers[0x94][0] = am_ZPX;
-	op_handlers[0x94][1] = op_STY;
-	op_handlers[0x95][0] = am_ZPX;
-	op_handlers[0x95][1] = op_STA;
-	op_handlers[0x96][0] = am_ZPY;
-	op_handlers[0x96][1] = op_STX;
-	op_handlers[0x98][0] = am_IMP;
-	op_handlers[0x98][1] = op_TYA;
-	op_handlers[0x99][0] = am_ABY;
-	op_handlers[0x99][1] = op_STA;
-	op_handlers[0x9A][0] = am_IMP;
-	op_handlers[0x9A][1] = op_TXS;
-	op_handlers[0x9D][0] = am_ABX;
-	op_handlers[0x9D][1] = op_STA;
-	op_handlers[0xA0][0] = am_IMM;
-	op_handlers[0xA0][1] = op_LDY;
-	op_handlers[0xA1][0] = am_IZX;
-	op_handlers[0xA1][1] = op_LDA;
-	op_handlers[0xA2][0] = am_IMM;
-	op_handlers[0xA2][1] = op_LDX;
-	op_handlers[0xA4][0] = am_ZP;
-	op_handlers[0xA4][1] = op_LDY;
-	op_handlers[0xA5][0] = am_ZP;
-	op_handlers[0xA5][1] = op_LDA;
-	op_handlers[0xA6][0] = am_ZP;
-	op_handlers[0xA6][1] = op_LDX;
-	op_handlers[0xA8][0] = am_IMP;
-	op_handlers[0xA8][1] = op_TAY;
-	op_handlers[0xA9][0] = am_IMM;
-	op_handlers[0xA9][1] = op_LDA;
-	op_handlers[0xAA][0] = am_IMP;
-	op_handlers[0xAA][1] = op_TAX;
-	op_handlers[0xAC][0] = am_ABS;
-	op_handlers[0xAC][1] = op_LDY;
-	op_handlers[0xAD][0] = am_ABS;
-	op_handlers[0xAD][1] = op_LDA;
-	op_handlers[0xAE][0] = am_ABS;
-	op_handlers[0xAE][1] = op_LDX;
-	op_handlers[0xB0][0] = am_REL;
-	op_handlers[0xB0][1] = op_BCS;
-	op_handlers[0xB1][0] = am_IZY;
-	op_handlers[0xB1][1] = op_LDA;
-	op_handlers[0xB4][0] = am_ZPX;
-	op_handlers[0xB4][1] = op_LDY;
-	op_handlers[0xB5][0] = am_ZPX;
-	op_handlers[0xB5][1] = op_LDA;
-	op_handlers[0xB6][0] = am_ZPY;
-	op_handlers[0xB6][1] = op_LDX;
-	op_handlers[0xB8][0] = am_IMP;
-	op_handlers[0xB8][1] = op_CLV;
-	op_handlers[0xB9][0] = am_ABY;
-	op_handlers[0xB9][1] = op_LDA;
-	op_handlers[0xBA][0] = am_IMP;
-	op_handlers[0xBA][1] = op_TSX;
-	op_handlers[0xBC][0] = am_ABX;
-	op_handlers[0xBC][1] = op_LDY;
-	op_handlers[0xBD][0] = am_ABX;
-	op_handlers[0xBD][1] = op_LDA;
-	op_handlers[0xBE][0] = am_ABY;
-	op_handlers[0xBE][1] = op_LDX;
-	op_handlers[0xC0][0] = am_IMM;
-	op_handlers[0xC0][1] = op_CPY;
-	op_handlers[0xC1][0] = am_IZX;
-	op_handlers[0xC1][1] = op_CMP;
-	op_handlers[0xC4][0] = am_ZP;
-	op_handlers[0xC4][1] = op_CPY;
-	op_handlers[0xC5][0] = am_ZP;
-	op_handlers[0xC5][1] = op_CMP;
-	op_handlers[0xC6][0] = am_ZP;
-	op_handlers[0xC6][1] = op_DEC;
-	op_handlers[0xC8][0] = am_IMP;
-	op_handlers[0xC8][1] = op_INY;
-	op_handlers[0xC9][0] = am_IMM;
-	op_handlers[0xC9][1] = op_CMP;
-	op_handlers[0xCA][0] = am_IMP;
-	op_handlers[0xCA][1] = op_DEX;
-	op_handlers[0xCC][0] = am_ABS;
-	op_handlers[0xCC][1] = op_CPY;
-	op_handlers[0xCD][0] = am_ABS;
-	op_handlers[0xCD][1] = op_CMP;
-	op_handlers[0xCE][0] = am_ABS;
-	op_handlers[0xCE][1] = op_DEC;
-	op_handlers[0xD0][0] = am_REL;
-	op_handlers[0xD0][1] = op_BNE;
-	op_handlers[0xD1][0] = am_IZY;
-	op_handlers[0xD1][1] = op_CMP;
-	op_handlers[0xD5][0] = am_ZPX;
-	op_handlers[0xD5][1] = op_CMP;
-	op_handlers[0xD6][0] = am_ZPX;
-	op_handlers[0xD6][1] = op_DEC;
-	op_handlers[0xD8][0] = am_IMP;
-	op_handlers[0xD8][1] = op_CLD;
-	op_handlers[0xD9][0] = am_ABY;
-	op_handlers[0xD9][1] = op_CMP;
-	op_handlers[0xDD][0] = am_ABX;
-	op_handlers[0xDD][1] = op_CMP;
-	op_handlers[0xDE][0] = am_ABX;
-	op_handlers[0xDE][1] = op_DEC;
-	op_handlers[0xE0][0] = am_IMM;
-	op_handlers[0xE0][1] = op_CPX;
-	op_handlers[0xE1][0] = am_IZX;
-	op_handlers[0xE1][1] = op_SBC;
-	op_handlers[0xE4][0] = am_ZP;
-	op_handlers[0xE4][1] = op_CPX;
-	op_handlers[0xE5][0] = am_ZP;
-	op_handlers[0xE5][1] = op_SBC;
-	op_handlers[0xE6][0] = am_ZP;
-	op_handlers[0xE6][1] = op_INC;
-	op_handlers[0xE8][0] = am_IMP;
-	op_handlers[0xE8][1] = op_INX;
-	op_handlers[0xE9][0] = am_IMM;
-	op_handlers[0xE9][1] = op_SBC;
-	op_handlers[0xEB][0] = am_IMM;
-	op_handlers[0xEB][1] = op_SBC; // Official SBC alias
-	op_handlers[0xEC][0] = am_ABS;
-	op_handlers[0xEC][1] = op_CPX;
-	op_handlers[0xED][0] = am_ABS;
-	op_handlers[0xED][1] = op_SBC;
-	op_handlers[0xEE][0] = am_ABS;
-	op_handlers[0xEE][1] = op_INC;
-	op_handlers[0xF0][0] = am_REL;
-	op_handlers[0xF0][1] = op_BEQ;
-	op_handlers[0xF1][0] = am_IZY;
-	op_handlers[0xF1][1] = op_SBC;
-	op_handlers[0xF5][0] = am_ZPX;
-	op_handlers[0xF5][1] = op_SBC;
-	op_handlers[0xF6][0] = am_ZPX;
-	op_handlers[0xF6][1] = op_INC;
-	op_handlers[0xF8][0] = am_IMP;
-	op_handlers[0xF8][1] = op_SED;
-	op_handlers[0xF9][0] = am_ABY;
-	op_handlers[0xF9][1] = op_SBC;
-	op_handlers[0xFD][0] = am_ABX;
-	op_handlers[0xFD][1] = op_SBC;
-	op_handlers[0xFE][0] = am_ABX;
-	op_handlers[0xFE][1] = op_INC;
+
+typedef void (*OpFunc)(void);
+static OpFunc op_handlers[256][2] = {
 #if ENABLE_ILLEGAL_OPCODE
-	// NOP variants (Reads memory, 2/3/4 cycles)
-	// $02, $12, $22, $32, $42, $52, $62, $72, $92, $B2, $D2, $F2 are KIL (Jam)
-	// Let's map NOPs first
-	// NOP Immediate (2 cycles)
-	op_handlers[0x80][0] = am_IMM;
-	op_handlers[0x80][1] = op_NOP;
-	op_handlers[0x82][0] = am_IMM;
-	op_handlers[0x82][1] = op_NOP;
-	op_handlers[0x89][0] = am_IMM;
-	op_handlers[0x89][1] = op_NOP;
-	op_handlers[0xC2][0] = am_IMM;
-	op_handlers[0xC2][1] = op_NOP;
-	op_handlers[0xE2][0] = am_IMM;
-	op_handlers[0xE2][1] = op_NOP;
-	// NOP Zero Page (3 cycles)
-	op_handlers[0x04][0] = am_ZP;
-	op_handlers[0x04][1] = op_NOP_RD;
-	op_handlers[0x44][0] = am_ZP;
-	op_handlers[0x44][1] = op_NOP_RD;
-	op_handlers[0x64][0] = am_ZP;
-	op_handlers[0x64][1] = op_NOP_RD;
-	// NOP Zero Page X (4 cycles)
-	op_handlers[0x14][0] = am_ZPX;
-	op_handlers[0x14][1] = op_NOP_RD;
-	op_handlers[0x34][0] = am_ZPX;
-	op_handlers[0x34][1] = op_NOP_RD;
-	op_handlers[0x54][0] = am_ZPX;
-	op_handlers[0x54][1] = op_NOP_RD;
-	op_handlers[0x74][0] = am_ZPX;
-	op_handlers[0x74][1] = op_NOP_RD;
-	op_handlers[0xD4][0] = am_ZPX;
-	op_handlers[0xD4][1] = op_NOP_RD;
-	op_handlers[0xF4][0] = am_ZPX;
-	op_handlers[0xF4][1] = op_NOP_RD;
-	// NOP Absolute (4 cycles)
-	op_handlers[0x0C][0] = am_ABS;
-	op_handlers[0x0C][1] = op_NOP_RD;
-	// NOP Absolute X (4/5 cycles)
-	op_handlers[0x1C][0] = am_ABX;
-	op_handlers[0x1C][1] = op_NOP_RD;
-	op_handlers[0x3C][0] = am_ABX;
-	op_handlers[0x3C][1] = op_NOP_RD;
-	op_handlers[0x5C][0] = am_ABX;
-	op_handlers[0x5C][1] = op_NOP_RD;
-	op_handlers[0x7C][0] = am_ABX;
-	op_handlers[0x7C][1] = op_NOP_RD;
-	op_handlers[0xDC][0] = am_ABX;
-	op_handlers[0xDC][1] = op_NOP_RD;
-	op_handlers[0xFC][0] = am_ABX;
-	op_handlers[0xFC][1] = op_NOP_RD;
-	// LAX
-	op_handlers[0xA7][0] = am_ZP;
-	op_handlers[0xA7][1] = op_LAX;
-	op_handlers[0xB7][0] = am_ZPY;
-	op_handlers[0xB7][1] = op_LAX;
-	op_handlers[0xAF][0] = am_ABS;
-	op_handlers[0xAF][1] = op_LAX;
-	op_handlers[0xBF][0] = am_ABY;
-	op_handlers[0xBF][1] = op_LAX;
-	op_handlers[0xA3][0] = am_IZX;
-	op_handlers[0xA3][1] = op_LAX;
-	op_handlers[0xB3][0] = am_IZY;
-	op_handlers[0xB3][1] = op_LAX;
-	op_handlers[0xAB][0] = am_IMM;
-	op_handlers[0xAB][1] = op_LAX;
-	// SAX
-	op_handlers[0x87][0] = am_ZP;
-	op_handlers[0x87][1] = op_SAX;
-	op_handlers[0x97][0] = am_ZPY;
-	op_handlers[0x97][1] = op_SAX;
-	op_handlers[0x8F][0] = am_ABS;
-	op_handlers[0x8F][1] = op_SAX;
-	op_handlers[0x83][0] = am_IZX;
-	op_handlers[0x83][1] = op_SAX;
-	// DCP
-	op_handlers[0xC7][0] = am_ZP;
-	op_handlers[0xC7][1] = op_DCP;
-	op_handlers[0xD7][0] = am_ZPX;
-	op_handlers[0xD7][1] = op_DCP;
-	op_handlers[0xCF][0] = am_ABS;
-	op_handlers[0xCF][1] = op_DCP;
-	op_handlers[0xDF][0] = am_ABX;
-	op_handlers[0xDF][1] = op_DCP;
-	op_handlers[0xDB][0] = am_ABY;
-	op_handlers[0xDB][1] = op_DCP;
-	op_handlers[0xC3][0] = am_IZX;
-	op_handlers[0xC3][1] = op_DCP;
-	op_handlers[0xD3][0] = am_IZY;
-	op_handlers[0xD3][1] = op_DCP;
-	// ISB
-	op_handlers[0xE7][0] = am_ZP;
-	op_handlers[0xE7][1] = op_ISB;
-	op_handlers[0xF7][0] = am_ZPX;
-	op_handlers[0xF7][1] = op_ISB;
-	op_handlers[0xEF][0] = am_ABS;
-	op_handlers[0xEF][1] = op_ISB;
-	op_handlers[0xFF][0] = am_ABX;
-	op_handlers[0xFF][1] = op_ISB;
-	op_handlers[0xFB][0] = am_ABY;
-	op_handlers[0xFB][1] = op_ISB;
-	op_handlers[0xE3][0] = am_IZX;
-	op_handlers[0xE3][1] = op_ISB;
-	op_handlers[0xF3][0] = am_IZY;
-	op_handlers[0xF3][1] = op_ISB;
-	// SLO
-	op_handlers[0x07][0] = am_ZP;
-	op_handlers[0x07][1] = op_SLO;
-	op_handlers[0x17][0] = am_ZPX;
-	op_handlers[0x17][1] = op_SLO;
-	op_handlers[0x0F][0] = am_ABS;
-	op_handlers[0x0F][1] = op_SLO;
-	op_handlers[0x1F][0] = am_ABX;
-	op_handlers[0x1F][1] = op_SLO;
-	op_handlers[0x1B][0] = am_ABY;
-	op_handlers[0x1B][1] = op_SLO;
-	op_handlers[0x03][0] = am_IZX;
-	op_handlers[0x03][1] = op_SLO;
-	op_handlers[0x13][0] = am_IZY;
-	op_handlers[0x13][1] = op_SLO;
-	// RLA
-	op_handlers[0x27][0] = am_ZP;
-	op_handlers[0x27][1] = op_RLA;
-	op_handlers[0x37][0] = am_ZPX;
-	op_handlers[0x37][1] = op_RLA;
-	op_handlers[0x2F][0] = am_ABS;
-	op_handlers[0x2F][1] = op_RLA;
-	op_handlers[0x3F][0] = am_ABX;
-	op_handlers[0x3F][1] = op_RLA;
-	op_handlers[0x3B][0] = am_ABY;
-	op_handlers[0x3B][1] = op_RLA;
-	op_handlers[0x23][0] = am_IZX;
-	op_handlers[0x23][1] = op_RLA;
-	op_handlers[0x33][0] = am_IZY;
-	op_handlers[0x33][1] = op_RLA;
-	// SRE
-	op_handlers[0x47][0] = am_ZP;
-	op_handlers[0x47][1] = op_SRE;
-	op_handlers[0x57][0] = am_ZPX;
-	op_handlers[0x57][1] = op_SRE;
-	op_handlers[0x4F][0] = am_ABS;
-	op_handlers[0x4F][1] = op_SRE;
-	op_handlers[0x5F][0] = am_ABX;
-	op_handlers[0x5F][1] = op_SRE;
-	op_handlers[0x5B][0] = am_ABY;
-	op_handlers[0x5B][1] = op_SRE;
-	op_handlers[0x43][0] = am_IZX;
-	op_handlers[0x43][1] = op_SRE;
-	op_handlers[0x53][0] = am_IZY;
-	op_handlers[0x53][1] = op_SRE;
-	// RRA
-	op_handlers[0x67][0] = am_ZP;
-	op_handlers[0x67][1] = op_RRA;
-	op_handlers[0x77][0] = am_ZPX;
-	op_handlers[0x77][1] = op_RRA;
-	op_handlers[0x6F][0] = am_ABS;
-	op_handlers[0x6F][1] = op_RRA;
-	op_handlers[0x7F][0] = am_ABX;
-	op_handlers[0x7F][1] = op_RRA;
-	op_handlers[0x7B][0] = am_ABY;
-	op_handlers[0x7B][1] = op_RRA;
-	op_handlers[0x63][0] = am_IZX;
-	op_handlers[0x63][1] = op_RRA;
-	op_handlers[0x73][0] = am_IZY;
-	op_handlers[0x73][1] = op_RRA;
-	// ANC
-	op_handlers[0x0B][0] = am_IMM;
-	op_handlers[0x0B][1] = op_ANC;
-	op_handlers[0x2B][0] = am_IMM;
-	op_handlers[0x2B][1] = op_ANC;
-	// ALR
-	op_handlers[0x4B][0] = am_IMM;
-	op_handlers[0x4B][1] = op_ALR;
-	// ARR
-	op_handlers[0x6B][0] = am_IMM;
-	op_handlers[0x6B][1] = op_ARR;
-	// XAA
-	op_handlers[0x8B][0] = am_IMM;
-	op_handlers[0x8B][1] = op_XAA;
-	// AXS
-	op_handlers[0xCB][0] = am_IMM;
-	op_handlers[0xCB][1] = op_AXS;
-	// AHX
-	op_handlers[0x9F][0] = am_ABY;
-	op_handlers[0x9F][1] = op_AHX;
-	op_handlers[0x93][0] = am_IZY;
-	op_handlers[0x93][1] = op_AHX;
-	// SHY
-	op_handlers[0x9C][0] = am_ABX;
-	op_handlers[0x9C][1] = op_SHY;
-	// SHX
-	op_handlers[0x9E][0] = am_ABY;
-	op_handlers[0x9E][1] = op_SHX;
-	// TAS
-	op_handlers[0x9B][0] = am_ABY;
-	op_handlers[0x9B][1] = op_TAS;
-	// LAS
-	op_handlers[0xBB][0] = am_ABY;
-	op_handlers[0xBB][1] = op_LAS;
-	// KIL / JAM
-	op_handlers[0x02][0] = am_IMP;
-	op_handlers[0x02][1] = op_KIL;
-	op_handlers[0x12][0] = am_IMP;
-	op_handlers[0x12][1] = op_KIL;
-	op_handlers[0x22][0] = am_IMP;
-	op_handlers[0x22][1] = op_KIL;
-	op_handlers[0x32][0] = am_IMP;
-	op_handlers[0x32][1] = op_KIL;
-	op_handlers[0x42][0] = am_IMP;
-	op_handlers[0x42][1] = op_KIL;
-	op_handlers[0x52][0] = am_IMP;
-	op_handlers[0x52][1] = op_KIL;
-	op_handlers[0x62][0] = am_IMP;
-	op_handlers[0x62][1] = op_KIL;
-	op_handlers[0x72][0] = am_IMP;
-	op_handlers[0x72][1] = op_KIL;
-	op_handlers[0x92][0] = am_IMP;
-	op_handlers[0x92][1] = op_KIL;
-	op_handlers[0xB2][0] = am_IMP;
-	op_handlers[0xB2][1] = op_KIL;
-	op_handlers[0xD2][0] = am_IMP;
-	op_handlers[0xD2][1] = op_KIL;
-	op_handlers[0xF2][0] = am_IMP;
-	op_handlers[0xF2][1] = op_KIL;
+	[0x00] = {am_IMP, op_BRK}, [0x01] = {am_IZX, op_ORA}, [0x02] = {am_IMP, op_KIL}, [0x03] = {am_IZX, op_SLO},
+	[0x04] = {am__ZP, op_NRD}, [0x05] = {am__ZP, op_ORA}, [0x06] = {am__ZP, op_ASL}, [0x07] = {am__ZP, op_SLO},
+	[0x08] = {am_IMP, op_PHP}, [0x09] = {am_IMM, op_ORA}, [0x0A] = {am_ACC, op_ASL}, [0x0B] = {am_IMM, op_ANC},
+	[0x0C] = {am_ABS, op_NRD}, [0x0D] = {am_ABS, op_ORA}, [0x0E] = {am_ABS, op_ASL}, [0x0F] = {am_ABS, op_SLO},
+	[0x10] = {am_REL, op_BPL}, [0x11] = {am_IZY, op_ORA}, [0x12] = {am_IMP, op_KIL}, [0x13] = {am_IZY, op_SLO},
+	[0x14] = {am_ZPX, op_NRD}, [0x15] = {am_ZPX, op_ORA}, [0x16] = {am_ZPX, op_ASL}, [0x17] = {am_ZPX, op_SLO},
+	[0x18] = {am_IMP, op_CLC}, [0x19] = {am_ABY, op_ORA}, [0x1A] = {am_IMP, op_NOP}, [0x1B] = {am_ABY, op_SLO},
+	[0x1C] = {am_ABX, op_NRD}, [0x1D] = {am_ABX, op_ORA}, [0x1E] = {am_ABX, op_ASL}, [0x1F] = {am_ABX, op_SLO},
+	[0x20] = {am_ABS, op_JSR}, [0x21] = {am_IZX, op_AND}, [0x22] = {am_IMP, op_KIL}, [0x23] = {am_IZX, op_RLA},
+	[0x24] = {am__ZP, op_BIT}, [0x25] = {am__ZP, op_AND}, [0x26] = {am__ZP, op_ROL}, [0x27] = {am__ZP, op_RLA},
+	[0x28] = {am_IMP, op_PLP}, [0x29] = {am_IMM, op_AND}, [0x2A] = {am_ACC, op_ROL}, [0x2B] = {am_IMM, op_ANC},
+	[0x2C] = {am_ABS, op_BIT}, [0x2D] = {am_ABS, op_AND}, [0x2E] = {am_ABS, op_ROL}, [0x2F] = {am_ABS, op_RLA},
+	[0x30] = {am_REL, op_BMI}, [0x31] = {am_IZY, op_AND}, [0x32] = {am_IMP, op_KIL}, [0x33] = {am_IZY, op_RLA},
+	[0x34] = {am_ZPX, op_NRD}, [0x35] = {am_ZPX, op_AND}, [0x36] = {am_ZPX, op_ROL}, [0x37] = {am_ZPX, op_RLA},
+	[0x38] = {am_IMP, op_SEC}, [0x39] = {am_ABY, op_AND}, [0x3A] = {am_IMP, op_NOP}, [0x3B] = {am_ABY, op_RLA},
+	[0x3C] = {am_ABX, op_NRD}, [0x3D] = {am_ABX, op_AND}, [0x3E] = {am_ABX, op_ROL}, [0x3F] = {am_ABX, op_RLA},
+	[0x40] = {am_IMP, op_RTI}, [0x41] = {am_IZX, op_EOR}, [0x42] = {am_IMP, op_KIL}, [0x43] = {am_IZX, op_SRE},
+	[0x44] = {am__ZP, op_NRD}, [0x45] = {am__ZP, op_EOR}, [0x46] = {am__ZP, op_LSR}, [0x47] = {am__ZP, op_SRE},
+	[0x48] = {am_IMP, op_PHA}, [0x49] = {am_IMM, op_EOR}, [0x4A] = {am_ACC, op_LSR}, [0x4B] = {am_IMM, op_ALR},
+	[0x4C] = {am_ABS, op_JMP}, [0x4D] = {am_ABS, op_EOR}, [0x4E] = {am_ABS, op_LSR}, [0x4F] = {am_ABS, op_SRE},
+	[0x50] = {am_REL, op_BVC}, [0x51] = {am_IZY, op_EOR}, [0x52] = {am_IMP, op_KIL}, [0x53] = {am_IZY, op_SRE},
+	[0x54] = {am_ZPX, op_NRD}, [0x55] = {am_ZPX, op_EOR}, [0x56] = {am_ZPX, op_LSR}, [0x57] = {am_ZPX, op_SRE},
+	[0x58] = {am_IMP, op_CLI}, [0x59] = {am_ABY, op_EOR}, [0x5A] = {am_IMP, op_NOP}, [0x5B] = {am_ABY, op_SRE},
+	[0x5C] = {am_ABX, op_NRD}, [0x5D] = {am_ABX, op_EOR}, [0x5E] = {am_ABX, op_LSR}, [0x5F] = {am_ABX, op_SRE},
+	[0x60] = {am_IMP, op_RTS}, [0x61] = {am_IZX, op_ADC}, [0x62] = {am_IMP, op_KIL}, [0x63] = {am_IZX, op_RRA},
+	[0x64] = {am__ZP, op_NRD}, [0x65] = {am__ZP, op_ADC}, [0x66] = {am__ZP, op_ROR}, [0x67] = {am__ZP, op_RRA},
+	[0x68] = {am_IMP, op_PLA}, [0x69] = {am_IMM, op_ADC}, [0x6A] = {am_ACC, op_ROR}, [0x6B] = {am_IMM, op_ARR},
+	[0x6C] = {am_IND, op_JMP}, [0x6D] = {am_ABS, op_ADC}, [0x6E] = {am_ABS, op_ROR}, [0x6F] = {am_ABS, op_RRA},
+	[0x70] = {am_REL, op_BVS}, [0x71] = {am_IZY, op_ADC}, [0x72] = {am_IMP, op_KIL}, [0x73] = {am_IZY, op_RRA},
+	[0x74] = {am_ZPX, op_NRD}, [0x75] = {am_ZPX, op_ADC}, [0x76] = {am_ZPX, op_ROR}, [0x77] = {am_ZPX, op_RRA},
+	[0x78] = {am_IMP, op_SEI}, [0x79] = {am_ABY, op_ADC}, [0x7A] = {am_IMP, op_NOP}, [0x7B] = {am_ABY, op_RRA},
+	[0x7C] = {am_ABX, op_NRD}, [0x7D] = {am_ABX, op_ADC}, [0x7E] = {am_ABX, op_ROR}, [0x7F] = {am_ABX, op_RRA},
+	[0x80] = {am_IMM, op_NOP}, [0x81] = {am_IZX, op_STA}, [0x82] = {am_IMM, op_NOP}, [0x83] = {am_IZX, op_SAX},
+	[0x84] = {am__ZP, op_STY}, [0x85] = {am__ZP, op_STA}, [0x86] = {am__ZP, op_STX}, [0x87] = {am__ZP, op_SAX},
+	[0x88] = {am_IMP, op_DEY}, [0x89] = {am_IMM, op_NOP}, [0x8A] = {am_IMP, op_TXA}, [0x8B] = {am_IMM, op_XAA},
+	[0x8C] = {am_ABS, op_STY}, [0x8D] = {am_ABS, op_STA}, [0x8E] = {am_ABS, op_STX}, [0x8F] = {am_ABS, op_SAX},
+	[0x90] = {am_REL, op_BCC}, [0x91] = {am_IZY, op_STA}, [0x92] = {am_IMP, op_KIL}, [0x93] = {am_IZY, op_AHX},
+	[0x94] = {am_ZPX, op_STY}, [0x95] = {am_ZPX, op_STA}, [0x96] = {am_ZPY, op_STX}, [0x97] = {am_ZPY, op_SAX},
+	[0x98] = {am_IMP, op_TYA}, [0x99] = {am_ABY, op_STA}, [0x9A] = {am_IMP, op_TXS}, [0x9B] = {am_ABY, op_TAS},
+	[0x9C] = {am_ABX, op_SHY}, [0x9D] = {am_ABX, op_STA}, [0x9E] = {am_ABY, op_SHX}, [0x9F] = {am_ABY, op_AHX},
+	[0xA0] = {am_IMM, op_LDY}, [0xA1] = {am_IZX, op_LDA}, [0xA2] = {am_IMM, op_LDX}, [0xA3] = {am_IZX, op_LAX},
+	[0xA4] = {am__ZP, op_LDY}, [0xA5] = {am__ZP, op_LDA}, [0xA6] = {am__ZP, op_LDX}, [0xA7] = {am__ZP, op_LAX},
+	[0xA8] = {am_IMP, op_TAY}, [0xA9] = {am_IMM, op_LDA}, [0xAA] = {am_IMP, op_TAX}, [0xAB] = {am_IMM, op_LAX},
+	[0xAC] = {am_ABS, op_LDY}, [0xAD] = {am_ABS, op_LDA}, [0xAE] = {am_ABS, op_LDX}, [0xAF] = {am_ABS, op_LAX},
+	[0xB0] = {am_REL, op_BCS}, [0xB1] = {am_IZY, op_LDA}, [0xB2] = {am_IMP, op_KIL}, [0xB3] = {am_IZY, op_LAX},
+	[0xB4] = {am_ZPX, op_LDY}, [0xB5] = {am_ZPX, op_LDA}, [0xB6] = {am_ZPY, op_LDX}, [0xB7] = {am_ZPY, op_LAX},
+	[0xB8] = {am_IMP, op_CLV}, [0xB9] = {am_ABY, op_LDA}, [0xBA] = {am_IMP, op_TSX}, [0xBB] = {am_ABY, op_LAS},
+	[0xBC] = {am_ABX, op_LDY}, [0xBD] = {am_ABX, op_LDA}, [0xBE] = {am_ABY, op_LDX}, [0xBF] = {am_ABY, op_LAX},
+	[0xC0] = {am_IMM, op_CPY}, [0xC1] = {am_IZX, op_CMP}, [0xC2] = {am_IMM, op_NOP}, [0xC3] = {am_IZX, op_DCP},
+	[0xC4] = {am__ZP, op_CPY}, [0xC5] = {am__ZP, op_CMP}, [0xC6] = {am__ZP, op_DEC}, [0xC7] = {am__ZP, op_DCP},
+	[0xC8] = {am_IMP, op_INY}, [0xC9] = {am_IMM, op_CMP}, [0xCA] = {am_IMP, op_DEX}, [0xCB] = {am_IMM, op_AXS},
+	[0xCC] = {am_ABS, op_CPY}, [0xCD] = {am_ABS, op_CMP}, [0xCE] = {am_ABS, op_DEC}, [0xCF] = {am_ABS, op_DCP},
+	[0xD0] = {am_REL, op_BNE}, [0xD1] = {am_IZY, op_CMP}, [0xD2] = {am_IMP, op_KIL}, [0xD3] = {am_IZY, op_DCP},
+	[0xD4] = {am_ZPX, op_NRD}, [0xD5] = {am_ZPX, op_CMP}, [0xD6] = {am_ZPX, op_DEC}, [0xD7] = {am_ZPX, op_DCP},
+	[0xD8] = {am_IMP, op_CLD}, [0xD9] = {am_ABY, op_CMP}, [0xDA] = {am_IMP, op_NOP}, [0xDB] = {am_ABY, op_DCP},
+	[0xDC] = {am_ABX, op_NRD}, [0xDD] = {am_ABX, op_CMP}, [0xDE] = {am_ABX, op_DEC}, [0xDF] = {am_ABX, op_DCP},
+	[0xE0] = {am_IMM, op_CPX}, [0xE1] = {am_IZX, op_SBC}, [0xE2] = {am_IMM, op_NOP}, [0xE3] = {am_IZX, op_ISB},
+	[0xE4] = {am__ZP, op_CPX}, [0xE5] = {am__ZP, op_SBC}, [0xE6] = {am__ZP, op_INC}, [0xE7] = {am__ZP, op_ISB},
+	[0xE8] = {am_IMP, op_INX}, [0xE9] = {am_IMM, op_SBC}, [0xEA] = {am_IMP, op_NOP}, [0xEB] = {am_IMM, op_SBC},
+	[0xEC] = {am_ABS, op_CPX}, [0xED] = {am_ABS, op_SBC}, [0xEE] = {am_ABS, op_INC}, [0xEF] = {am_ABS, op_ISB},
+	[0xF0] = {am_REL, op_BEQ}, [0xF1] = {am_IZY, op_SBC}, [0xF2] = {am_IMP, op_KIL}, [0xF3] = {am_IZY, op_ISB},
+	[0xF4] = {am_ZPX, op_NRD}, [0xF5] = {am_ZPX, op_SBC}, [0xF6] = {am_ZPX, op_INC}, [0xF7] = {am_ZPX, op_ISB},
+	[0xF8] = {am_IMP, op_SED}, [0xF9] = {am_ABY, op_SBC}, [0xFA] = {am_IMP, op_NOP}, [0xFB] = {am_ABY, op_ISB},
+	[0xFC] = {am_ABX, op_NRD}, [0xFD] = {am_ABX, op_SBC}, [0xFE] = {am_ABX, op_INC}, [0xFF] = {am_ABX, op_ISB},
+#else
+	[0x00] = {am_IMP, op_BRK}, [0x01] = {am_IZX, op_ORA}, [0x02] = {am_IMP, op_NOP}, [0x03] = {am_IMP, op_NOP},
+	[0x04] = {am_IMP, op_NOP}, [0x05] = {am__ZP, op_ORA}, [0x06] = {am__ZP, op_ASL}, [0x07] = {am_IMP, op_NOP},
+	[0x08] = {am_IMP, op_PHP}, [0x09] = {am_IMM, op_ORA}, [0x0A] = {am_ACC, op_ASL}, [0x0B] = {am_IMP, op_NOP},
+	[0x0C] = {am_IMP, op_NOP}, [0x0D] = {am_ABS, op_ORA}, [0x0E] = {am_ABS, op_ASL}, [0x0F] = {am_IMP, op_NOP},
+	[0x10] = {am_REL, op_BPL}, [0x11] = {am_IZY, op_ORA}, [0x12] = {am_IMP, op_NOP}, [0x13] = {am_IMP, op_NOP},
+	[0x14] = {am_IMP, op_NOP}, [0x15] = {am_ZPX, op_ORA}, [0x16] = {am_ZPX, op_ASL}, [0x17] = {am_IMP, op_NOP},
+	[0x18] = {am_IMP, op_CLC}, [0x19] = {am_ABY, op_ORA}, [0x1A] = {am_IMP, op_NOP}, [0x1B] = {am_IMP, op_NOP},
+	[0x1C] = {am_IMP, op_NOP}, [0x1D] = {am_ABX, op_ORA}, [0x1E] = {am_ABX, op_ASL}, [0x1F] = {am_IMP, op_NOP},
+	[0x20] = {am_ABS, op_JSR}, [0x21] = {am_IZX, op_AND}, [0x22] = {am_IMP, op_NOP}, [0x23] = {am_IMP, op_NOP},
+	[0x24] = {am__ZP, op_BIT}, [0x25] = {am__ZP, op_AND}, [0x26] = {am__ZP, op_ROL}, [0x27] = {am_IMP, op_NOP},
+	[0x28] = {am_IMP, op_PLP}, [0x29] = {am_IMM, op_AND}, [0x2A] = {am_ACC, op_ROL}, [0x2B] = {am_IMP, op_NOP},
+	[0x2C] = {am_ABS, op_BIT}, [0x2D] = {am_ABS, op_AND}, [0x2E] = {am_ABS, op_ROL}, [0x2F] = {am_IMP, op_NOP},
+	[0x30] = {am_REL, op_BMI}, [0x31] = {am_IZY, op_AND}, [0x32] = {am_IMP, op_NOP}, [0x33] = {am_IMP, op_NOP},
+	[0x34] = {am_IMP, op_NOP}, [0x35] = {am_ZPX, op_AND}, [0x36] = {am_ZPX, op_ROL}, [0x37] = {am_IMP, op_NOP},
+	[0x38] = {am_IMP, op_SEC}, [0x39] = {am_ABY, op_AND}, [0x3A] = {am_IMP, op_NOP}, [0x3B] = {am_IMP, op_NOP},
+	[0x3C] = {am_IMP, op_NOP}, [0x3D] = {am_ABX, op_AND}, [0x3E] = {am_ABX, op_ROL}, [0x3F] = {am_IMP, op_NOP},
+	[0x40] = {am_IMP, op_RTI}, [0x41] = {am_IZX, op_EOR}, [0x42] = {am_IMP, op_NOP}, [0x43] = {am_IMP, op_NOP},
+	[0x44] = {am_IMP, op_NOP}, [0x45] = {am__ZP, op_EOR}, [0x46] = {am__ZP, op_LSR}, [0x47] = {am_IMP, op_NOP},
+	[0x48] = {am_IMP, op_PHA}, [0x49] = {am_IMM, op_EOR}, [0x4A] = {am_ACC, op_LSR}, [0x4B] = {am_IMP, op_NOP},
+	[0x4C] = {am_ABS, op_JMP}, [0x4D] = {am_ABS, op_EOR}, [0x4E] = {am_ABS, op_LSR}, [0x4F] = {am_IMP, op_NOP},
+	[0x50] = {am_REL, op_BVC}, [0x51] = {am_IZY, op_EOR}, [0x52] = {am_IMP, op_NOP}, [0x53] = {am_IMP, op_NOP},
+	[0x54] = {am_IMP, op_NOP}, [0x55] = {am_ZPX, op_EOR}, [0x56] = {am_ZPX, op_LSR}, [0x57] = {am_IMP, op_NOP},
+	[0x58] = {am_IMP, op_CLI}, [0x59] = {am_ABY, op_EOR}, [0x5A] = {am_IMP, op_NOP}, [0x5B] = {am_IMP, op_NOP},
+	[0x5C] = {am_IMP, op_NOP}, [0x5D] = {am_ABX, op_EOR}, [0x5E] = {am_ABX, op_LSR}, [0x5F] = {am_IMP, op_NOP},
+	[0x60] = {am_IMP, op_RTS}, [0x61] = {am_IZX, op_ADC}, [0x62] = {am_IMP, op_NOP}, [0x63] = {am_IMP, op_NOP},
+	[0x64] = {am_IMP, op_NOP}, [0x65] = {am__ZP, op_ADC}, [0x66] = {am__ZP, op_ROR}, [0x67] = {am_IMP, op_NOP},
+	[0x68] = {am_IMP, op_PLA}, [0x69] = {am_IMM, op_ADC}, [0x6A] = {am_ACC, op_ROR}, [0x6B] = {am_IMP, op_NOP},
+	[0x6C] = {am_IND, op_JMP}, [0x6D] = {am_ABS, op_ADC}, [0x6E] = {am_ABS, op_ROR}, [0x6F] = {am_IMP, op_NOP},
+	[0x70] = {am_REL, op_BVS}, [0x71] = {am_IZY, op_ADC}, [0x72] = {am_IMP, op_NOP}, [0x73] = {am_IMP, op_NOP},
+	[0x74] = {am_IMP, op_NOP}, [0x75] = {am_ZPX, op_ADC}, [0x76] = {am_ZPX, op_ROR}, [0x77] = {am_IMP, op_NOP},
+	[0x78] = {am_IMP, op_SEI}, [0x79] = {am_ABY, op_ADC}, [0x7A] = {am_IMP, op_NOP}, [0x7B] = {am_IMP, op_NOP},
+	[0x7C] = {am_IMP, op_NOP}, [0x7D] = {am_ABX, op_ADC}, [0x7E] = {am_ABX, op_ROR}, [0x7F] = {am_IMP, op_NOP},
+	[0x80] = {am_IMP, op_NOP}, [0x81] = {am_IZX, op_STA}, [0x82] = {am_IMP, op_NOP}, [0x83] = {am_IMP, op_NOP},
+	[0x84] = {am__ZP, op_STY}, [0x85] = {am__ZP, op_STA}, [0x86] = {am__ZP, op_STX}, [0x87] = {am_IMP, op_NOP},
+	[0x88] = {am_IMP, op_DEY}, [0x89] = {am_IMP, op_NOP}, [0x8A] = {am_IMP, op_TXA}, [0x8B] = {am_IMP, op_NOP},
+	[0x8C] = {am_ABS, op_STY}, [0x8D] = {am_ABS, op_STA}, [0x8E] = {am_ABS, op_STX}, [0x8F] = {am_IMP, op_NOP},
+	[0x90] = {am_REL, op_BCC}, [0x91] = {am_IZY, op_STA}, [0x92] = {am_IMP, op_NOP}, [0x93] = {am_IMP, op_NOP},
+	[0x94] = {am_ZPX, op_STY}, [0x95] = {am_ZPX, op_STA}, [0x96] = {am_ZPY, op_STX}, [0x97] = {am_IMP, op_NOP},
+	[0x98] = {am_IMP, op_TYA}, [0x99] = {am_ABY, op_STA}, [0x9A] = {am_IMP, op_TXS}, [0x9B] = {am_IMP, op_NOP},
+	[0x9C] = {am_IMP, op_NOP}, [0x9D] = {am_ABX, op_STA}, [0x9E] = {am_IMP, op_NOP}, [0x9F] = {am_IMP, op_NOP},
+	[0xA0] = {am_IMM, op_LDY}, [0xA1] = {am_IZX, op_LDA}, [0xA2] = {am_IMM, op_LDX}, [0xA3] = {am_IMP, op_NOP},
+	[0xA4] = {am__ZP, op_LDY}, [0xA5] = {am__ZP, op_LDA}, [0xA6] = {am__ZP, op_LDX}, [0xA7] = {am_IMP, op_NOP},
+	[0xA8] = {am_IMP, op_TAY}, [0xA9] = {am_IMM, op_LDA}, [0xAA] = {am_IMP, op_TAX}, [0xAB] = {am_IMP, op_NOP},
+	[0xAC] = {am_ABS, op_LDY}, [0xAD] = {am_ABS, op_LDA}, [0xAE] = {am_ABS, op_LDX}, [0xAF] = {am_IMP, op_NOP},
+	[0xB0] = {am_REL, op_BCS}, [0xB1] = {am_IZY, op_LDA}, [0xB2] = {am_IMP, op_NOP}, [0xB3] = {am_IMP, op_NOP},
+	[0xB4] = {am_ZPX, op_LDY}, [0xB5] = {am_ZPX, op_LDA}, [0xB6] = {am_ZPY, op_LDX}, [0xB7] = {am_IMP, op_NOP},
+	[0xB8] = {am_IMP, op_CLV}, [0xB9] = {am_ABY, op_LDA}, [0xBA] = {am_IMP, op_TSX}, [0xBB] = {am_IMP, op_NOP},
+	[0xBC] = {am_ABX, op_LDY}, [0xBD] = {am_ABX, op_LDA}, [0xBE] = {am_ABY, op_LDX}, [0xBF] = {am_IMP, op_NOP},
+	[0xC0] = {am_IMM, op_CPY}, [0xC1] = {am_IZX, op_CMP}, [0xC2] = {am_IMP, op_NOP}, [0xC3] = {am_IMP, op_NOP},
+	[0xC4] = {am__ZP, op_CPY}, [0xC5] = {am__ZP, op_CMP}, [0xC6] = {am__ZP, op_DEC}, [0xC7] = {am_IMP, op_NOP},
+	[0xC8] = {am_IMP, op_INY}, [0xC9] = {am_IMM, op_CMP}, [0xCA] = {am_IMP, op_DEX}, [0xCB] = {am_IMP, op_NOP},
+	[0xCC] = {am_ABS, op_CPY}, [0xCD] = {am_ABS, op_CMP}, [0xCE] = {am_ABS, op_DEC}, [0xCF] = {am_IMP, op_NOP},
+	[0xD0] = {am_REL, op_BNE}, [0xD1] = {am_IZY, op_CMP}, [0xD2] = {am_IMP, op_NOP}, [0xD3] = {am_IMP, op_NOP},
+	[0xD4] = {am_IMP, op_NOP}, [0xD5] = {am_ZPX, op_CMP}, [0xD6] = {am_ZPX, op_DEC}, [0xD7] = {am_IMP, op_NOP},
+	[0xD8] = {am_IMP, op_CLD}, [0xD9] = {am_ABY, op_CMP}, [0xDA] = {am_IMP, op_NOP}, [0xDB] = {am_IMP, op_NOP},
+	[0xDC] = {am_IMP, op_NOP}, [0xDD] = {am_ABX, op_CMP}, [0xDE] = {am_ABX, op_DEC}, [0xDF] = {am_IMP, op_NOP},
+	[0xE0] = {am_IMM, op_CPX}, [0xE1] = {am_IZX, op_SBC}, [0xE2] = {am_IMP, op_NOP}, [0xE3] = {am_IMP, op_NOP},
+	[0xE4] = {am__ZP, op_CPX}, [0xE5] = {am__ZP, op_SBC}, [0xE6] = {am__ZP, op_INC}, [0xE7] = {am_IMP, op_NOP},
+	[0xE8] = {am_IMP, op_INX}, [0xE9] = {am_IMM, op_SBC}, [0xEA] = {am_IMP, op_NOP}, [0xEB] = {am_IMM, op_SBC},
+	[0xEC] = {am_ABS, op_CPX}, [0xED] = {am_ABS, op_SBC}, [0xEE] = {am_ABS, op_INC}, [0xEF] = {am_IMP, op_NOP},
+	[0xF0] = {am_REL, op_BEQ}, [0xF1] = {am_IZY, op_SBC}, [0xF2] = {am_IMP, op_NOP}, [0xF3] = {am_IMP, op_NOP},
+	[0xF4] = {am_IMP, op_NOP}, [0xF5] = {am_ZPX, op_SBC}, [0xF6] = {am_ZPX, op_INC}, [0xF7] = {am_IMP, op_NOP},
+	[0xF8] = {am_IMP, op_SED}, [0xF9] = {am_ABY, op_SBC}, [0xFA] = {am_IMP, op_NOP}, [0xFB] = {am_IMP, op_NOP},
+	[0xFC] = {am_IMP, op_NOP}, [0xFD] = {am_ABX, op_SBC}, [0xFE] = {am_ABX, op_INC}, [0xFF] = {am_IMP, op_NOP},
 #endif
-}
+};
+
 
 static void map_bank(int8_t page, uint8_t bank_idx)
 {
@@ -1471,7 +1068,6 @@ void cpu6502_init(void)
 	CPU_ROM_banks[3] = romfile + rom_offset + (prev_bank_idx * 0x2000);
 	CPU_ROM_banks[4] = romfile + rom_offset + (last_bank_idx * 0x2000);
 	CPU_reset();
-	init_op_handlers();
 	LOG("CPU初始化成功！！！");
 }
 
@@ -1499,8 +1095,7 @@ void ISR6502(uint16_t VECTOR)
 
 void run6502(uint32_t cycles)
 {
-	uint32_t total_cycles = cycles / 256;
-	uint32_t target_cycles = clocks + total_cycles;
+	uint32_t target_cycles = clocks + cycles;
 	while (clocks < target_cycles)
 	{
 		if (cpu_jam) return; // Stop if CPU is jammed

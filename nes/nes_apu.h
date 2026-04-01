@@ -256,6 +256,8 @@ extern uint16_t* wave_buffers;
 
 #ifdef __cplusplus
 extern "C" {
+
+
 #endif /* __cplusplus */
 extern void apu_init(void);
 extern void apu_setparams(int sample_rate, int refresh_rate, int frag_size, int sample_bits);
@@ -266,7 +268,8 @@ extern uint8_t Apu_Read4015(uint32_t address);
 extern void Apu_Write(uint8_t value, uint32_t address);
 
 void apu_soundoutput(void);
-void apu_write4017(uint32_t address, uint8_t value);
+void Apu_Write4015(uint8_t value, uint32_t address);
+void Apu_Write4017(uint8_t value, uint32_t address);
 #ifdef __cplusplus
 }
 #endif

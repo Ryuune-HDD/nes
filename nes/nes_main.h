@@ -65,15 +65,9 @@ uint8_t nes_load_rom(void);
 void nes_sram_free(void);
 uint8_t nes_sram_malloc(uint32_t romsize);
 uint8_t nes_load(const char* pname);
-void nes_set_window(void);
 void nes_get_gamepadval(void);
 void nes_emulate_frame(void);
 void debug_6502(uint16_t reg0, uint8_t reg1);
-
-void nes_i2s_dma_tx_callback(void);
-int nes_sound_open(int samples_per_sync, int sample_rate);
-void nes_sound_close(void);
-void nes_apu_fill_buffer(int samples, uint16_t* wavebuf);
 
 extern uint32_t get_crc32(uint8_t* buf, uint32_t len);
 #endif
