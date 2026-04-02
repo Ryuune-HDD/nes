@@ -1,7 +1,3 @@
-//
-// Created by Yang on 2026/4/2.
-//
-
 #ifndef NES_KEY_H
 #define NES_KEY_H
 #include <stdint.h>
