@@ -1,90 +1,53 @@
-//
-// Created by Yang on 2025/12/4.
-//
-
 #include "interface.h"
-#include <stdio.h>
-#include <stdlib.h>
 #include <stdint.h>
-#include "nes_cpu.h"
+#include "nes_apu.h"
+#include "../devices/display.h"
+#include "../devices/pcm.h"
+#include "../devices/key.h"
+#include "../devices/rom.h"
 
-// 获取文件大小（单位：字节）
-size_t nes_get_size(const char* file)
+/********************** 设备初始化和关闭 ************************/
+void devices_init()
 {
-    if (!file)
-    {
-        LOG("file not found\n");
-        return 0;
-    }
+#if !ENABLE_LOG
+    DisplayWindowInit();
+#endif
+    pcm_init(APU_SAMPLE_RATE);
+}
 
-    FILE* fp = fopen(file, "rb");
-    if (!fp)
-    {
-        LOG("file not open\n");
-        return 0;
-    }
+void devices_uninit()
+{
+    pcm_cleanup();
+}
 
-    if (fseek(fp, 0, SEEK_END) != 0)
-    {
-        LOG("file not seek end\n");
-        fclose(fp);
-        return 0;
-    }
 
-    size_t size = ftell(fp);
-    fclose(fp);
-    LOG("File size: %d\n", size);
-    return size;
+/********************** 文件读取 ************************/
+// 获取ROM文件大小（单位：字节）
+size_t nes_rom_get_size(const char* file)
+{
+    return rom_get_size(file);
 }
 
 // 从文件读取 ROM 数据到指定缓冲区 romfile
-// 调用者需确保 romfile 有足够空间（至少 nes_get_size(file) 字节）
-int nes_read_rom(const char* file, uint8_t* romfile)
+int nes_rom_read(const char* file, uint8_t* romfile)
 {
-    if (!file || !romfile)
-    {
-        return -1;
-    }
+    return rom_read(file, romfile);
+}
 
-    FILE* fp = fopen(file, "rb");
-    if (!fp)
-    {
-        return -2; // 打开失败
-    }
+/********************** 屏幕显示 ************************/
+void nes_display_write(uint16_t* rgb565_data, uint8_t line)
+{
+    display_write(rgb565_data, line);
+}
 
-    if (fseek(fp, 0, SEEK_SET) != 0)
-    {
-        fclose(fp);
-        return -3;
-    }
+/********************** 音频播放 ************************/
+void nes_audio_write(uint16_t* buffer, size_t sample_count)
+{
+    pcm_submit_buffer(buffer, sample_count);
+}
 
-    // 获取文件大小
-    if (fseek(fp, 0, SEEK_END) != 0)
-    {
-        fclose(fp);
-        return -4;
-    }
-    long size = ftell(fp);
-    if (size <= 0)
-    {
-        fclose(fp);
-        return -5;
-    }
-
-    if (fseek(fp, 0, SEEK_SET) != 0)
-    {
-        fclose(fp);
-        return -6;
-    }
-
-    size_t bytes_read = fread(romfile, 1, (size_t)size, fp);
-    fclose(fp);
-
-    if (bytes_read != (size_t)size)
-    {
-        return -7; // 读取不完整
-    }
-
-    LOG("File bytes_read: %d\n", bytes_read);
-    return bytes_read; // 成功
+/********************** 按键监听 ************************/
+void nes_key_read_state(uint8_t* pad0, uint8_t* pad1)
+{
+    key_read_state(pad0, pad1);
 }

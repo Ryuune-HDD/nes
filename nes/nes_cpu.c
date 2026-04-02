@@ -1,6 +1,8 @@
 #include "nes_cpu.h"
 #include "nes_main.h"
 #include <string.h>
+#include "interface.h"
+
 static uint8_t* CPU_ROM_banks[5] = {0};
 static uint8_t joy0_shift; // 手柄1移位寄存器
 static uint8_t joy1_shift; // 手柄2移位寄存器
@@ -10,6 +12,7 @@ static uint8_t temp8;
 static uint16_t temp16; // 用于有效地址（EA）
 static int g_page_crossed = 0;
 static uint16_t g_bad_addr = 0;
+static uint32_t cycles = 0;
 #if ENABLE_ILLEGAL_OPCODE
 static int cpu_jam = 0; // CPU 指令队列中KIL指令的拥塞状态
 #endif
@@ -114,7 +117,7 @@ void K6502_Write(uint16_t addr, uint8_t val)
 				{
 					spr_ram[i] = K6502_Read(src_addr + i);
 				}
-				clocks += 514;
+				cycles += 514;
 				break;
 			}
 		case 0x15: Apu_Write4015(val, addr);
@@ -292,7 +295,7 @@ static void op_ADC(void)
 	if (g_page_crossed)
 	{
 		K6502_Read(g_bad_addr);
-		clocks++;
+		cycles++;
 	}
 	ADC(K6502_Read(temp16));
 }
@@ -302,7 +305,7 @@ static void op_AND(void)
 	if (g_page_crossed)
 	{
 		K6502_Read(g_bad_addr);
-		clocks++;
+		cycles++;
 	}
 	A &= K6502_Read(temp16);
 	setNZ(A);
@@ -331,7 +334,7 @@ static void op_BCC(void)
 	if (!(P & FLAG_C))
 	{
 		PC = temp16;
-		clocks += 1 + g_page_crossed;
+		cycles += 1 + g_page_crossed;
 	}
 }
 
@@ -340,7 +343,7 @@ static void op_BCS(void)
 	if (P & FLAG_C)
 	{
 		PC = temp16;
-		clocks += 1 + g_page_crossed;
+		cycles += 1 + g_page_crossed;
 	}
 }
 
@@ -349,7 +352,7 @@ static void op_BEQ(void)
 	if (P & FLAG_Z)
 	{
 		PC = temp16;
-		clocks += 1 + g_page_crossed;
+		cycles += 1 + g_page_crossed;
 	}
 }
 
@@ -364,7 +367,7 @@ static void op_BMI(void)
 	if (P & FLAG_N)
 	{
 		PC = temp16;
-		clocks += 1 + g_page_crossed;
+		cycles += 1 + g_page_crossed;
 	}
 }
 
@@ -373,7 +376,7 @@ static void op_BNE(void)
 	if (!(P & FLAG_Z))
 	{
 		PC = temp16;
-		clocks += 1 + g_page_crossed;
+		cycles += 1 + g_page_crossed;
 	}
 }
 
@@ -382,7 +385,7 @@ static void op_BPL(void)
 	if (!(P & FLAG_N))
 	{
 		PC = temp16;
-		clocks += 1 + g_page_crossed;
+		cycles += 1 + g_page_crossed;
 	}
 }
 
@@ -401,7 +404,7 @@ static void op_BVC(void)
 	if (!(P & FLAG_V))
 	{
 		PC = temp16;
-		clocks += 1 + g_page_crossed;
+		cycles += 1 + g_page_crossed;
 	}
 }
 
@@ -410,7 +413,7 @@ static void op_BVS(void)
 	if (P & FLAG_V)
 	{
 		PC = temp16;
-		clocks += 1 + g_page_crossed;
+		cycles += 1 + g_page_crossed;
 	}
 }
 
@@ -424,7 +427,7 @@ static void op_CMP(void)
 	if (g_page_crossed)
 	{
 		K6502_Read(g_bad_addr);
-		clocks++;
+		cycles++;
 	}
 	CMP(A, K6502_Read(temp16));
 }
@@ -463,7 +466,7 @@ static void op_EOR(void)
 	if (g_page_crossed)
 	{
 		K6502_Read(g_bad_addr);
-		clocks++;
+		cycles++;
 	}
 	A ^= K6502_Read(temp16);
 	setNZ(A);
@@ -506,7 +509,7 @@ static void op_LDA(void)
 	if (g_page_crossed)
 	{
 		K6502_Read(g_bad_addr);
-		clocks++;
+		cycles++;
 	}
 	A = K6502_Read(temp16);
 	setNZ(A);
@@ -517,7 +520,7 @@ static void op_LDX(void)
 	if (g_page_crossed)
 	{
 		K6502_Read(g_bad_addr);
-		clocks++;
+		cycles++;
 	}
 	X = K6502_Read(temp16);
 	setNZ(X);
@@ -528,7 +531,7 @@ static void op_LDY(void)
 	if (g_page_crossed)
 	{
 		K6502_Read(g_bad_addr);
-		clocks++;
+		cycles++;
 	}
 	Y = K6502_Read(temp16);
 	setNZ(Y);
@@ -561,7 +564,7 @@ static void op_ORA(void)
 	if (g_page_crossed)
 	{
 		K6502_Read(g_bad_addr);
-		clocks++;
+		cycles++;
 	}
 	A |= K6502_Read(temp16);
 	setNZ(A);
@@ -636,7 +639,7 @@ static void op_SBC(void)
 	if (g_page_crossed)
 	{
 		K6502_Read(g_bad_addr);
-		clocks++;
+		cycles++;
 	}
 	SBC(K6502_Read(temp16));
 }
@@ -688,7 +691,7 @@ static void op_NRD(void)
 	if (g_page_crossed)
 	{
 		K6502_Read(g_bad_addr);
-		clocks++;
+		cycles++;
 	}
 	K6502_Read(temp16);
 }
@@ -750,7 +753,7 @@ static void op_LAX(void)
 	if (g_page_crossed)
 	{
 		K6502_Read(g_bad_addr);
-		clocks++;
+		cycles++;
 	}
 	A = K6502_Read(temp16);
 	X = A;
@@ -879,7 +882,7 @@ static void op_LAS(void)
 	if (g_page_crossed)
 	{
 		K6502_Read(g_bad_addr);
-		clocks++;
+		cycles++;
 	}
 	A = X = S = (K6502_Read(temp16) & S);
 	setNZ(A);
@@ -1077,7 +1080,7 @@ void CPU_reset(void)
 	P = FLAG_R | FLAG_I;
 	cpunmi = 0;
 	cpuirq = 0;
-	clocks = 0;
+	cycles = 0;
 #if ENABLE_ILLEGAL_OPCODE
 	cpu_jam = 0;
 #endif
@@ -1091,13 +1094,13 @@ void ISR6502(uint16_t VECTOR)
 	push(P & ~FLAG_B);
 	P |= FLAG_I;
 	PC = READ_WORD(VECTOR);
-	clocks += 7;
+	cycles += 7;
 }
 
 void run6502(uint32_t cyc)
 {
-	uint32_t target_cycles = clocks + cyc;
-	while (clocks < target_cycles)
+	uint32_t target_cycles = cycles + cyc;
+	while (cycles < target_cycles)
 	{
 #if ENABLE_ILLEGAL_OPCODE
 		if (cpu_jam) return; // 如果 CPU 被卡住则停止
@@ -1117,6 +1120,7 @@ void run6502(uint32_t cyc)
 		uint8_t opcode = K6502_Read(PC++);
 		op_handlers[opcode][0]();
 		op_handlers[opcode][1]();
+		cycles += cycles_map[opcode];
 		clocks += cycles_map[opcode];
 	}
 }

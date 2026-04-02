@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include "nes_ppu.h"
-#include "display.h"
-#include "nes_cpu.h"
+#include "interface.h"
 #include "string.h"
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -424,7 +423,7 @@ void scanline_draw(int LineNo)
         line_colors[i - 8] = NES_Palette[ppu->dummy_buffer[i]];
         // LOG("%04X ", ppu->dummy_buffer[i]);
     }
-    display_write(line_colors, LineNo);
+    nes_display_write(line_colors, LineNo);
 }
 
 void do_scanline_and_dont_draw(int LineNo)

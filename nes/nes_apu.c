@@ -1,7 +1,7 @@
 #include "nes_apu.h"
 #include "nes_cpu.h"
-#include "pcm.h"
 #include "string.h"
+#include "interface.h"
 
 //////////////////////////////////////////////////////////////////////////////////
 //本程序移植自网友ye781205的NES模拟器工程
@@ -1022,5 +1022,13 @@ void apu_soundoutput(void)
 {
     apu_process(wave_buffers, APU_PCMBUF_SIZE);
     clocks = 0;
-    pcm_submit_buffer(wave_buffers, APU_PCMBUF_SIZE);
+    // 添加诊断代码
+    // int non_zero = 0;
+    // for (int i = 0; i < APU_PCMBUF_SIZE; i++)
+    // {
+    //     LOG("%04X ", wave_buffers[i]);
+    // }
+    // LOG("Audio samples: %d/%d non-zero\n", non_zero, APU_PCMBUF_SIZE);
+    nes_audio_write(wave_buffers, APU_PCMBUF_SIZE);
+    // pcm_submit_buffer(wave_buffers, APU_PCMBUF_SIZE);
 }

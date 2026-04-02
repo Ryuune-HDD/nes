@@ -13,16 +13,7 @@ extern "C" {
 
 // 控制是否非官方指令（0=关闭，1=开启）
 #define ENABLE_ILLEGAL_OPCODE 1
-// 控制是否启用打印（0=关闭，1=开启）
-#define ENABLE_LOG 0
-#if ENABLE_LOG
-#define LOG(fmt, ...) do { \
-printf("[LOG] " fmt "\n", ##__VA_ARGS__); \
-fflush(stdout); \
-} while(0)
-#else
-#define LOG(fmt, ...)  // 空操作
-#endif
+
 
 // ----------------- 常量、标志位 -----------------
 #define FLAG_C 0x01  // Carry Flag（进位标志）
@@ -41,8 +32,6 @@ fflush(stdout); \
 
 // ----------------- 从外部回调（由工程其他部分提供） -----------------
 // 导入的函数
-extern void debug_6502(uint16_t reg0, uint8_t reg1);
-
 extern uint8_t asm_Mapper_ReadLow(uint16_t wAddr);
 extern void asm_Mapper_Write(uint8_t byData, uint16_t wAddr);
 extern void asm_Mapper_WriteLow(uint8_t byData, uint16_t wAddr);

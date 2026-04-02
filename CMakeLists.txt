@@ -4,7 +4,7 @@ project(nes)
 set(CMAKE_CXX_STANDARD 20)
 
 # 添加NES子目录
-add_subdirectory(NES)
+add_subdirectory(nes)
 
 # 生成compile_commands.json文件
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

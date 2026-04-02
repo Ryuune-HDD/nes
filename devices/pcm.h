@@ -7,6 +7,8 @@
 #ifdef __cplusplus
 extern "C" {
 
+
+
 #endif
 
 /**
@@ -18,7 +20,7 @@ int pcm_init(uint32_t sample_rate);
 
 /**
  * @brief 提交音频数据到播放缓冲区 (流式播放)
- * @param buffer PCM 数据指针 (16位立体声)
+ * @param buffer PCM 数据指针 (16位单声道)
  * @param sample_count 样本数 (非字节数)
  */
 int pcm_submit_buffer(const uint16_t* buffer, size_t sample_count);
@@ -39,7 +41,7 @@ void pcm_stop(void);
  * @brief 清理资源
  */
 void pcm_cleanup(void);
-
+void test_pcm();
 #ifdef __cplusplus
 }
 #endif

@@ -83,7 +83,7 @@ void TestDisplayPattern(void)
     free(frame_buffer);
 }
 
-void StartDisplayWindow(void)
+void DisplayWindowInit(void)
 {
     // 👇 添加这三行（仅用于调试！）
     AllocConsole();

@@ -10,6 +10,7 @@
 ////////////////////////////////////////////////////////////////////////////////// 	 
 
 //根据自己需要添加其他map文件用.  
+#include "interface.h"
 #include "nes_cpu.h"
 #include "mapper/000.cpp"
 #include "mapper/001.cpp"

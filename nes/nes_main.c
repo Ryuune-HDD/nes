@@ -4,14 +4,7 @@
 #include "nes_apu.h"
 #include <string.h>
 #include <stdlib.h>
-#include <stdio.h>
 
-// 以下库需要改
-// 自己的库
-#include <pcm.h>
-#include <windows.h>
-
-#include "display.h"
 #include "nes_cpu.h"
 #include "interface.h"
 //////////////////////////////////////////////////////////////////////////////////
@@ -265,7 +258,7 @@ uint8_t nes_sram_malloc(uint32_t romsize)
 //3,不支持的map
 uint8_t nes_load(const char* pname)
 {
-	size_t size = nes_get_size(pname);
+	size_t size = nes_rom_get_size(pname);
 
 	if (size == 0)
 	{
@@ -277,7 +270,7 @@ uint8_t nes_load(const char* pname)
 		return 5; // 内存分配失败
 	}
 	LOG("内存分配成功\n");
-	if (nes_read_rom(pname, romfile) < 0)
+	if (nes_rom_read(pname, romfile) < 0)
 	{
 		return 7;
 	}
@@ -287,6 +280,7 @@ uint8_t nes_load(const char* pname)
 		return 8; // 加载NES游戏ROM到内存中失败
 	}
 	LOG("游戏文件加载成功\n");
+	devices_init(); //初始化外部设备
 	cpu6502_init(); //初始化6502,并复位
 	Mapper_Init(); //map初始化
 	PPU_reset(); //ppu复位
@@ -294,47 +288,14 @@ uint8_t nes_load(const char* pname)
 	LOG("模拟器初始化成功\n");
 	nes_emulate_frame(); //进入NES模拟器主循环
 	nes_sram_free(); //释放内存
+	devices_init(); //关闭外部设备
 	return 0;
 }
-
 
 //读取游戏手柄数据
 void nes_get_gamepadval(void)
 {
-	PADdata0 = 0;
-
-	if (GetAsyncKeyState('W') & 0x8000)
-	{
-		PADdata0 |= 0x10; // UP
-	}
-	if (GetAsyncKeyState('S') & 0x8000)
-	{
-		PADdata0 |= 0x20; // DOWN
-	}
-	if (GetAsyncKeyState('A') & 0x8000)
-	{
-		PADdata0 |= 0x40; // LEFT
-	}
-	if (GetAsyncKeyState('D') & 0x8000)
-	{
-		PADdata0 |= 0x80; // RIGHT
-	}
-	if (GetAsyncKeyState(VK_LEFT) & 0x8000)
-	{
-		PADdata0 |= 0x01; // A
-	}
-	if (GetAsyncKeyState(VK_RIGHT) & 0x8000)
-	{
-		PADdata0 |= 0x02; // B
-	}
-	if (GetAsyncKeyState(VK_SPACE) & 0x8000)
-	{
-		PADdata0 |= 0x08; // Start
-	}
-	if (GetAsyncKeyState('H') & 0x8000)
-	{
-		PADdata0 |= 0x04; // Select
-	}
+	nes_key_read_state(&PADdata0, &PADdata1);
 }
 
 //nes模拟器主循环
@@ -380,10 +341,4 @@ void nes_emulate_frame(void)
 		if (nes_frame > NES_SKIP_FRAME)nes_frame = 0; //跳帧
 		if (system_task_return) break; //TPAD返回
 	}
-}
-
-//在6502.s里面被调用
-void debug_6502(uint16_t reg0, uint8_t reg1)
-{
-	LOG("6502 error:%x,%d\r\n", reg0, reg1);
 }

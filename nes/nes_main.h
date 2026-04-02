@@ -67,7 +67,6 @@ uint8_t nes_sram_malloc(uint32_t romsize);
 uint8_t nes_load(const char* pname);
 void nes_get_gamepadval(void);
 void nes_emulate_frame(void);
-void debug_6502(uint16_t reg0, uint8_t reg1);
 
 extern uint32_t get_crc32(uint8_t* buf, uint32_t len);
 #endif

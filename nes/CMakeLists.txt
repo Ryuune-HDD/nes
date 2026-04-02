@@ -3,6 +3,8 @@
 # 设置 C 和 C++ 标准
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -57,34 +59,26 @@ set(MAPPER_SOURCES
         mapper/227.cpp
         mapper/240.cpp
         mapper/245.cpp
-        nes_cpu.h
-        nes_cpu.c
 )
 
 # 创建静态库 NES
 add_library(NES ${NES_CORE_SOURCES} ${MAPPER_SOURCES})
 
+# 链接 devices 静态库
+add_subdirectory(../devices ../build/devices)
+target_link_libraries(NES PRIVATE nes_devices)
+
 # 设置包含目录
 target_include_directories(NES
         PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../devices>
         $<INSTALL_INTERFACE:include>
         PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/mapper
+        mapper
 )
-
-# 确保 C++ 源文件被当作 C++ 编译（即使扩展名被误识别）
-#set_source_files_properties(${MAPPER_SOURCES} PROPERTIES LANGUAGE CXX)
-
-# 如果你的 nes_mapper.c 需要调用 C++ 函数，建议在 .cpp 中使用 extern "C"
-# 但更推荐：Mapper 内部用 C++ 实现，对外导出 C 接口（见下方说明）
 
 # Add Windows specific libraries if on Windows
 if (WIN32)
-    # Add Windows system libraries
-    target_link_libraries(NES
-            user32
-            gdi32
-            winmm
-    )
+    target_link_libraries(NES PRIVATE user32 gdi32 winmm)
 endif ()

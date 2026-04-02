@@ -15,7 +15,7 @@
 
 #define FRAME_RATE 60           //FPS limited(MAX)
 #define NES_APU_BUF_NUM 20      //6个APU BUF
-#define APU_SAMPLE_RATE 88200   //APU音频输出为22.050Khz
+#define APU_SAMPLE_RATE 44100   //APU音频输出为22.050Khz
 #define APU_PCMBUF_SIZE (int)(APU_SAMPLE_RATE/FRAME_RATE) //44100/60=735 22050/60=367
 
 #undef NULL
@@ -223,6 +223,7 @@ extern uint16_t* wave_buffers;
 
 #ifdef __cplusplus
 extern "C" {
+
 
 
 #endif /* __cplusplus */
