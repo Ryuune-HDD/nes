@@ -4,42 +4,40 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* 上下文结构体 */
+/* ============== 播放器上下文 ============== */
 typedef struct
 {
     ma_device device;
     ma_pcm_rb rb; /* 环形缓冲区 */
-    ma_decoder decoder; /* 解码器 */
     ma_bool32 is_initialized;
 } pcm_context_t;
 
 static pcm_context_t g_ctx = {0};
 
-/* 音频回调函数：从环形缓冲区取数据给声卡 */
+/* ============== 数据回调函数 (消费者) ============== */
 static void audio_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
 {
     (void)pInput;
     pcm_context_t* ctx = (pcm_context_t*)pDevice->pUserData;
 
-    /* 1. 申请读取 */
+    /* 从环形缓冲区读取数据 */
     void* pReadBuffer;
     ma_uint32 framesToRead = frameCount;
+
+    /* 1. 申请读取 */
     ma_pcm_rb_acquire_read(&ctx->rb, &framesToRead, &pReadBuffer);
 
-    /* 2. 拷贝数据到输出 (pOutput) */
+    /* 2. 拷贝数据到输出 */
     if (framesToRead > 0)
     {
-        /* 计算字节大小：帧数 * 2通道 * 2字节(16bit) */
-        memcpy(pOutput, pReadBuffer, framesToRead * 2 * 2);
-
-        /* 3. 提交读取，移动读指针 */
+        memcpy(pOutput, pReadBuffer, framesToRead * 2 * 2); /* 16bit立体声=4字节/帧 */
         ma_pcm_rb_commit_read(&ctx->rb, framesToRead);
     }
 
-    /* 如果读不够，剩余部分不管 (miniaudio 默认会填零) */
+    /* 如果读不够，剩余部分保持静音 (miniaudio默认已清零) */
 }
 
-/* 初始化：只接受采样率 */
+/* ============== 初始化 PCM 系统 ============== */
 int pcm_init(uint32_t sample_rate)
 {
     if (g_ctx.is_initialized) return 0;
@@ -58,9 +56,14 @@ int pcm_init(uint32_t sample_rate)
     }
 
     /* 2. 初始化环形缓冲区
-       参数: 格式, 通道数, 缓冲区帧数, 可选内存分配器, 结构体指针
-       缓冲区设为采样率的2倍(约2秒)，防止卡顿 */
-    if (ma_pcm_rb_init(ma_format_s16, 2, sample_rate * 2, NULL, NULL, &g_ctx.rb) != MA_SUCCESS)
+       【关键修改】：缓冲区大小设置为大约 2~3 帧的数据量 (约30ms~50ms)
+       NES 一帧产生 sample_rate/60 个样本。
+       这里设置为 sample_rate/20 (50ms)，既能平滑播放，又能有效限制模拟器速度
+    */
+    ma_uint32 buffer_frames = sample_rate / 20;
+    if (buffer_frames < 1024) buffer_frames = 1024; /* 安全下限 */
+
+    if (ma_pcm_rb_init(ma_format_s16, 2, buffer_frames, NULL, NULL, &g_ctx.rb) != MA_SUCCESS)
     {
         ma_device_uninit(&g_ctx.device);
         return -1;
@@ -70,69 +73,58 @@ int pcm_init(uint32_t sample_rate)
 
     /* 启动设备 */
     ma_device_start(&g_ctx.device);
-
-    return 0;
+ return 0;
 }
 
-/* 提交数据：将 NES 的数据写入环形缓冲区 */
+/* ============== 提交数据 (生产者，带阻塞) ============== */
 int pcm_submit_buffer(const uint16_t* buffer, size_t sample_count)
 {
     if (!g_ctx.is_initialized) return -1;
 
     /* 样本数转帧数 (16位立体声: 2样本=1帧) */
-    ma_uint32 frame_count = (ma_uint32)(sample_count / 2);
+    ma_uint32 total_frames = (ma_uint32)(sample_count / 2);
+    ma_uint32 frames_written = 0;
 
-    /* 1. 申请写入空间 */
-    void* pWriteBuffer;
-    ma_pcm_rb_acquire_write(&g_ctx.rb, &frame_count, &pWriteBuffer);
-
-    /* 2. 拷贝数据进去 */
-    if (frame_count > 0)
+    /* 循环写入，直到所有数据都写入缓冲区 */
+    while (frames_written < total_frames)
     {
-        memcpy(pWriteBuffer, buffer, frame_count * 2 * 2);
+        /* 检查可用空间 */
+        ma_uint32 available = ma_pcm_rb_available_write(&g_ctx.rb);
 
-        /* 3. 提交写入，移动写指针 */
-        ma_pcm_rb_commit_write(&g_ctx.rb, frame_count);
-    }
-
-    return 0;
-}
-
-/* 播放文件：解码后写入缓冲区 */
-int pcm_play_file(const char* filename)
-{
-    if (!g_ctx.is_initialized) return -1;
-
-    ma_device_stop(&g_ctx.device);
-
-    ma_decoder_config dec_config = ma_decoder_config_init(ma_format_s16, 2, g_ctx.device.sampleRate);
-    if (ma_decoder_init_file(filename, &dec_config, &g_ctx.decoder) != MA_SUCCESS)
-    {
-        return -1;
-    }
-
-    /* 临时缓冲区，用于读取解码数据 */
-    uint8_t temp_buffer[4096];
-    while (1)
-    {
-        ma_uint64 frames_read;
-        ma_decoder_read_pcm_frames(&g_ctx.decoder, temp_buffer, sizeof(temp_buffer) / 4, &frames_read);
-
-        if (frames_read == 0) break;
- /* 再次提交给环形缓冲区 */
-        pcm_submit_buffer((const uint16_t*)temp_buffer, frames_read * 2);
-
-        /* 等待缓冲区有空间 (简单防溢出) */
-        while (ma_pcm_rb_available_write(&g_ctx.rb) < frames_read)
+        if (available == 0)
         {
-            /* 可以加个 Sleep(1) 避免死循环占用CPU */
+            /* 【关键修改】：缓冲区满了，说明模拟器跑得太快
+               休眠 1ms 等待音频设备消费数据
+               这替代了 nes_emulate_frame 中的 Sleep(1)，实现自动同步 */
+            ma_sleep(1);
+            continue;
+        }
+
+        /* 计算本次写入量 */
+        ma_uint32 frames_to_write = total_frames - frames_written;
+        if (frames_to_write > available)
+        {
+            frames_to_write = available;
+        }
+
+        void* pWriteBuffer;
+        /* ma_pcm_rb_acquire_write 可能会返回比请求更小的连续内存块，
+           所以需要用 frames_to_write 传入并获取实际可写指针 */
+        ma_pcm_rb_acquire_write(&g_ctx.rb, &frames_to_write, &pWriteBuffer);
+
+        if (frames_to_write > 0)
+        {
+            /* 拷贝数据：源地址需要根据已写入帧数偏移 */
+            memcpy(pWriteBuffer, (uint8_t*)buffer + (frames_written * 4), frames_to_write * 4);
+            ma_pcm_rb_commit_write(&g_ctx.rb, frames_to_write);
+            frames_written += frames_to_write;
         }
     }
 
-    ma_decoder_uninit(&g_ctx.decoder);
     return 0;
 }
 
+/* ============== 停止播放 ============== */
 void pcm_stop(void)
 {
     if (g_ctx.is_initialized)
@@ -141,11 +133,14 @@ void pcm_stop(void)
     }
 }
 
+/* ============== 清理资源 ============== */
 void pcm_cleanup(void)
 {
     if (!g_ctx.is_initialized) return;
 
+    ma_device_stop(&g_ctx.device);
     ma_device_uninit(&g_ctx.device);
     ma_pcm_rb_uninit(&g_ctx.rb);
+
     memset(&g_ctx, 0, sizeof(g_ctx));
 }

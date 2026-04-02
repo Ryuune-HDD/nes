@@ -343,7 +343,7 @@ void nes_emulate_frame(void)
 	uint8_t nes_frame = 0;
 	while (1)
 	{
-		Sleep(1);
+		// Sleep(1);
 		// LINES 0-239
 		PPU_start_frame();
 		for (NES_scanline = 0; NES_scanline < 240; NES_scanline++)
