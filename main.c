@@ -4,20 +4,21 @@
 #include "nes_cpu.h"
 #include "nes_main.h"
 #include "pcm.h"
+#include "aa.h"
 
 int main()
 {
 #if !ENABLE_LOG
     StartDisplayWindow();
 #endif
-    // pcm_init(22050);
+    pcm_init(44100);
 
     // === CPU基础测试 ===
     // nes_load("../test_rom/nestest/nestest.nes");
 
     // === instr_test-v5 ===
     // 1. 测试所有指令包括非法指令
-    nes_load("../test_rom/instr_test-v5/all_instrs.nes");
+    // nes_load("../test_rom/instr_test-v5/all_instrs.nes");
     // 2. 只测试官方指令
     // nes_load("../test_rom/instr_test-v5/official_only.nes");
 
@@ -49,10 +50,9 @@ int main()
     // nes_load("../test_rom/apu_test/rom_singles/8-dmc_rates.nes");
 
     // mapper0
-    nes_load("../rom/LanMaster.nes");
+    // nes_load("../rom/LanMaster.nes");
     // nes_load("../rom/cjml.nes");
     // nes_load("../rom/tkdz.nes");
-    // nes_load("../rom/dzk.nes");
     // nes_load("../rom/dkq2.nes");
     // nes_load("../rom/cdr.nes");
     // nes_load("../rom/zxd.nes");
@@ -61,23 +61,22 @@ int main()
     // nes_load("../rom/tly.nes");
 
     // mapper2
-    // nes_load("../rom/hdl.nes");
+    nes_load("../rom/hdl.nes");
 
     // mapper3
     // nes_load("../rom/mxd.nes");
     // nes_load("../rom/elsfk.nes");
 
     // // mapper4
-    nes_load("../rom/yjs.nes");
+    // nes_load("../rom/yjs.nes");
 
     // aduio测试
     // pcm_init(16000);
     // pcm_play_file("../rom/rssq.pcm");
     //
-    // while (1)
-    // {
-    //     Sleep(100);
-    // }
+    // pcm_submit_buffer(pcm_data, pcm_data_length);
+    // Sleep(1000);
+    pcm_cleanup();
 }
 
 

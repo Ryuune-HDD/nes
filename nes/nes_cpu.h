@@ -11,6 +11,8 @@ extern "C" {
 
 #endif
 
+// 控制是否非官方指令（0=关闭，1=开启）
+#define ENABLE_ILLEGAL_OPCODE 1
 // 控制是否启用打印（0=关闭，1=开启）
 #define ENABLE_LOG 0
 #if ENABLE_LOG

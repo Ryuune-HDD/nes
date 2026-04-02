@@ -36,7 +36,7 @@ uint8_t PADdata1; //手柄2键值 [7:0]右7 左6 下5 上4 Start3 Select2 B1 A0
 
 uint8_t cpunmi; //cpu中断标志
 uint8_t cpuirq; //IRQ 标志
-uint32_t clocks; //CPU 时钟
+uint32_t clocks; //CPU 时钟 APU 专用
 
 uint8_t* NES_RAM; //保持1024字节对齐
 uint8_t* NES_SRAM;
@@ -53,8 +53,6 @@ uint8_t* VROM_tiles;
 
 apu_t* apu; //apu指针
 uint16_t* wave_buffers;
-uint16_t* i2sbuf1; //音频缓冲帧,占用内存数 367*4 字节@22050Hz
-uint16_t* i2sbuf2; //音频缓冲帧,占用内存数 367*4 字节@22050Hz
 
 uint16_t num = 0;
 //uint8_t* romfile;			//nes文件指针,指向整个nes文件的起始地址.
@@ -161,8 +159,6 @@ void nes_sram_free(void)
 	free(ppu);
 	free(apu);
 	free(wave_buffers);
-	free(i2sbuf1);
-	free(i2sbuf2);
 	free(romfile);
 	if ((VROM_tiles != VROM_banks) && VROM_banks && VROM_tiles) //如果分别为VROM_banks和VROM_tiles申请了内存,则释放
 	{
@@ -202,8 +198,6 @@ void nes_sram_free(void)
 	ppu = NULL;
 	apu = NULL;
 	wave_buffers = NULL;
-	i2sbuf1 = NULL;
-	i2sbuf2 = NULL;
 	romfile = NULL;
 	VROM_banks = NULL;
 	VROM_tiles = NULL;
@@ -225,8 +219,6 @@ uint8_t nes_sram_malloc(uint32_t romsize)
 	ppu = malloc(sizeof(ppu_data));
 	apu = malloc(sizeof(apu_t)); //sizeof(apu_t)=  12588
 	wave_buffers = malloc(APU_PCMBUF_SIZE * 2);
-	i2sbuf1 = malloc(APU_PCMBUF_SIZE * 2);
-	i2sbuf2 = malloc(APU_PCMBUF_SIZE * 2);
 	romfile = malloc(romsize); //申请游戏rom空间,等于nes文件大小， 不变
 
 	LOG("NES_SRAM    :%p\n", NES_SRAM);
@@ -236,8 +228,6 @@ uint8_t nes_sram_malloc(uint32_t romsize)
 	LOG("ppu         :%p\n", ppu);
 	LOG("apu         :%p\n", apu);
 	LOG("wave_buffers:%p\n", wave_buffers);
-	LOG("i2sbuf1     :%p\n", i2sbuf1);
-	LOG("i2sbuf2     :%p\n", i2sbuf2);
 	LOG("romfile     :%p\n", romfile);
 	LOG("romsize     :%d\n", romsize);
 
@@ -248,8 +238,7 @@ uint8_t nes_sram_malloc(uint32_t romsize)
 		romfile = malloc(romsize); //重新申请
 		LOG("romfile     :%p\n", romfile);
 	} //
-	if (!NES_RAM || !NES_SRAM || !RomHeader || !NES_Mapper || !spr_ram || !ppu || !apu || !wave_buffers || !
-		i2sbuf1 || !i2sbuf2 || !romfile)
+	if (!NES_RAM || !NES_SRAM || !RomHeader || !NES_Mapper || !spr_ram || !ppu || !apu || !wave_buffers || !romfile)
 	{
 		nes_sram_free();
 		return 1;
@@ -262,8 +251,6 @@ uint8_t nes_sram_malloc(uint32_t romsize)
 	memset(ppu, 0, sizeof(ppu_data));
 	memset(apu, 0, sizeof(apu_t));
 	memset(wave_buffers, 0, APU_PCMBUF_SIZE * 2);
-	memset(i2sbuf1, 0, APU_PCMBUF_SIZE * 2);
-	memset(i2sbuf2, 0, APU_PCMBUF_SIZE * 2);
 	memset(romfile, 0, romsize);
 	return 0;
 }
@@ -387,7 +374,7 @@ void nes_emulate_frame(void)
 			NES_Mapper->HSync(NES_scanline);
 		}
 		end_vblank();
-		// apu_soundoutput(); //输出游戏声音
+		apu_soundoutput(); //输出游戏声音
 		nes_frame_cnt++;
 		nes_frame++;
 		if (nes_frame > NES_SKIP_FRAME)nes_frame = 0; //跳帧

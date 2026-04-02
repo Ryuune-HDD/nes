@@ -2,7 +2,6 @@
 #define __NES_APU_H
 
 #include "nes_main.h"
-
 //////////////////////////////////////////////////////////////////////////////////	 
 //本程序移植自网友ye781205的NES模拟器工程
 //ALIENTEK STM32F407开发板
@@ -256,6 +255,7 @@ extern uint16_t* wave_buffers;
 
 #ifdef __cplusplus
 extern "C" {
+
 
 
 #endif /* __cplusplus */

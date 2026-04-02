@@ -1,4 +1,9 @@
 #include "nes_apu.h"
+
+#include <windows.h>
+
+#include "nes_cpu.h"
+#include "pcm.h"
 #include "string.h"
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -485,7 +490,7 @@ void apu_dmcreload(dmc_t* chan)
 int apu_dmc(dmc_t* chan)
 {
 	int delta_bit;
-
+	// LOG("apu_dmc1\r\n", chan->address);
 	APU_VOLUME_DECAY(chan->output_vol);
 
 	/* only process when channel is alive */
@@ -502,6 +507,7 @@ int apu_dmc(dmc_t* chan)
 			if (7 == delta_bit)
 			{
 				chan->cur_byte = K6502_Read(chan->address);
+				// LOG("apu_dmc addr: %02X\r\n", chan->address);
 				//chan->cur_byte = nes6502_getbyte(chan->address);*********************
 				/* steal a cycle from CPU偷从CPU周期*/
 				clocks++;
@@ -562,7 +568,7 @@ void apu_regwrite(uint32_t address, uint8_t value)
 	int chan = (address & 4) ? 1 : 0;
 	rectangle_t* rect = chan ? &(apu->rectangle[1]) : &(apu->rectangle[0]);
 
-	switch (address)
+	switch (address | APU_WRA0) // 2026/4/1修改， 原代码switch (address)
 	{
 	/* rectangles */
 	case APU_WRA0:
@@ -1124,7 +1130,10 @@ void apu_process(uint16_t* buffer, int num_samples)
 			}
 			/* little extra kick for the kids */
 			accum <<= 1;
-
+			// if (num_samples < 5 && accum != 0)
+			// {
+			// 	LOG("APU Sample accum: %d\r\n", accum);
+			// }
 			/* prevent clipping */
 			if (accum > 0x7FFF)accum = 0x7FFF;
 			else if (accum < -0x8000)accum = -0x8000;
@@ -1217,19 +1226,27 @@ void apu_init(void)
 //apu声音输出
 void apu_soundoutput(void)
 {
-	uint16_t i;
+	// 强行生成震耳欲聋的 1000Hz 纯方波，持续 1 秒
+	// static int test_count = 0;
+	// if (test_count < 10000)
+	// {
+	// 	LOG("test\r\n");
+	// 	test_count++;
+	// 	pcm_submit_buffer(wave_buffers, APU_PCMBUF_SIZE);
+	// 	Sleep(1000);
+	// 	clocks = 0;
+	// 	return; // 直接返回，不走 APU
+	// }
+	//
+	// // 1秒后恢复正常的 APU 逻辑
 	apu_process(wave_buffers, APU_PCMBUF_SIZE);
-	for (i = 0; i < 30; i++)
-	{
-		if (wave_buffers[i] != wave_buffers[i + 1])
-			break; //判断前30个数据,是不是都相等?
-	}
-	if (i == 30 && wave_buffers[i]) //都相等,且不等于0
-	{
-		for (i = 0; i < APU_PCMBUF_SIZE; i++)
-			wave_buffers[i] = 0; //是暂停状态输出的重复无效数据,直接修改为0.从而不输出杂音.
-	}
+	// for (int i = 0; i < APU_PCMBUF_SIZE; i++)
+	// {
+	// 	LOG("%04X", wave_buffers[i]);
+	// }
 	clocks = 0;
+	pcm_submit_buffer(wave_buffers, APU_PCMBUF_SIZE);
 }
+
 
 

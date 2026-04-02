@@ -1,160 +1,151 @@
-#include "pcm.h"
-#include <windows.h>
-#include <mmsystem.h>
-#include <stdio.h>
+#define MINIAUDIO_IMPLEMENTATION
+#include "miniaudio.h"
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
 
-#pragma comment(lib, "winmm.lib")
-
-#define BUFFER_COUNT 3
-#define MAX_SAMPLES_PER_BUF 4096
-
-static HWAVEOUT hWaveOut = NULL;
-static WAVEHDR headers[BUFFER_COUNT];
-static char* audio_buffers[BUFFER_COUNT];
-static volatile int next_free_buf = 0;
-static volatile int playing_count = 0;
-static int is_initialized = 0;
-static int g_sample_rate = 0;
-
-void CALLBACK waveOutProc(HWAVEOUT hwo, UINT uMsg, DWORD_PTR dwInstance,
-                          DWORD_PTR dwParam1, DWORD_PTR dwParam2)
+/* 上下文结构体 */
+typedef struct
 {
-    if (uMsg == WOM_DONE) {
-        playing_count--;
+    ma_device device;
+    ma_pcm_rb rb; /* 环形缓冲区 */
+    ma_decoder decoder; /* 解码器 */
+    ma_bool32 is_initialized;
+} pcm_context_t;
+
+static pcm_context_t g_ctx = {0};
+
+/* 音频回调函数：从环形缓冲区取数据给声卡 */
+static void audio_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
+{
+    (void)pInput;
+    pcm_context_t* ctx = (pcm_context_t*)pDevice->pUserData;
+
+    /* 1. 申请读取 */
+    void* pReadBuffer;
+    ma_uint32 framesToRead = frameCount;
+    ma_pcm_rb_acquire_read(&ctx->rb, &framesToRead, &pReadBuffer);
+
+    /* 2. 拷贝数据到输出 (pOutput) */
+    if (framesToRead > 0)
+    {
+        /* 计算字节大小：帧数 * 2通道 * 2字节(16bit) */
+        memcpy(pOutput, pReadBuffer, framesToRead * 2 * 2);
+
+        /* 3. 提交读取，移动读指针 */
+        ma_pcm_rb_commit_read(&ctx->rb, framesToRead);
     }
+
+    /* 如果读不够，剩余部分不管 (miniaudio 默认会填零) */
 }
 
+/* 初始化：只接受采样率 */
 int pcm_init(uint32_t sample_rate)
 {
-    if (is_initialized) return 0;
+    if (g_ctx.is_initialized) return 0;
 
-    if (sample_rate == 0) {
+    /* 1. 设备配置：固定 16位，立体声 */
+    ma_device_config config = ma_device_config_init(ma_device_type_playback);
+    config.playback.format = ma_format_s16;
+    config.playback.channels = 2;
+    config.sampleRate = sample_rate;
+    config.dataCallback = audio_callback;
+    config.pUserData = &g_ctx;
+
+    if (ma_device_init(NULL, &config, &g_ctx.device) != MA_SUCCESS)
+    {
         return -1;
     }
 
-    WAVEFORMATEX wfx = {0};
-    wfx.wFormatTag = WAVE_FORMAT_PCM;
-    wfx.nChannels = 1;
-    wfx.nSamplesPerSec = sample_rate;
-    wfx.wBitsPerSample = 16;
-    wfx.nBlockAlign = 2;
-    wfx.nAvgBytesPerSec = sample_rate * 2;
-    wfx.cbSize = 0;
-
-    MMRESULT res = waveOutOpen(&hWaveOut, WAVE_MAPPER, &wfx,
-                               (DWORD_PTR)waveOutProc, 0, CALLBACK_FUNCTION);
-    if (res != MMSYSERR_NOERROR) {
+    /* 2. 初始化环形缓冲区
+       参数: 格式, 通道数, 缓冲区帧数, 可选内存分配器, 结构体指针
+       缓冲区设为采样率的2倍(约2秒)，防止卡顿 */
+    if (ma_pcm_rb_init(ma_format_s16, 2, sample_rate * 2, NULL, NULL, &g_ctx.rb) != MA_SUCCESS)
+    {
+        ma_device_uninit(&g_ctx.device);
         return -1;
     }
 
-    for (int i = 0; i < BUFFER_COUNT; ++i) {
-        audio_buffers[i] = (char*)malloc(MAX_SAMPLES_PER_BUF * 2);
-        if (!audio_buffers[i]) {
-            for (int j = 0; j < i; ++j) free(audio_buffers[j]);
-            waveOutClose(hWaveOut);
-            return -1;
-        }
-        memset(&headers[i], 0, sizeof(WAVEHDR));
-    }
+    g_ctx.is_initialized = MA_TRUE;
 
-    is_initialized = 1;
-    playing_count = 0;
-    next_free_buf = 0;
-    g_sample_rate = sample_rate;
+    /* 启动设备 */
+    ma_device_start(&g_ctx.device);
+
     return 0;
 }
 
+/* 提交数据：将 NES 的数据写入环形缓冲区 */
 int pcm_submit_buffer(const uint16_t* buffer, size_t sample_count)
 {
-    if (!is_initialized || !hWaveOut || !buffer) {
-        return 1;
+    if (!g_ctx.is_initialized) return -1;
+
+    /* 样本数转帧数 (16位立体声: 2样本=1帧) */
+    ma_uint32 frame_count = (ma_uint32)(sample_count / 2);
+
+    /* 1. 申请写入空间 */
+    void* pWriteBuffer;
+    ma_pcm_rb_acquire_write(&g_ctx.rb, &frame_count, &pWriteBuffer);
+
+    /* 2. 拷贝数据进去 */
+    if (frame_count > 0)
+    {
+        memcpy(pWriteBuffer, buffer, frame_count * 2 * 2);
+
+        /* 3. 提交写入，移动写指针 */
+        ma_pcm_rb_commit_write(&g_ctx.rb, frame_count);
     }
-
-    if (sample_count == 0) return 0;
-
-    size_t byte_size = sample_count * sizeof(uint16_t);
-    if (byte_size > MAX_SAMPLES_PER_BUF * 2) {
-        byte_size = MAX_SAMPLES_PER_BUF * 2;
-    }
-
-    while (playing_count >= BUFFER_COUNT) {
-        Sleep(1);
-    }
-
-    int idx = next_free_buf;
-    next_free_buf = (next_free_buf + 1) % BUFFER_COUNT;
-
-    memcpy(audio_buffers[idx], buffer, byte_size);
-
-    WAVEHDR* hdr = &headers[idx];
-    if (hdr->dwFlags & WHDR_PREPARED) {
-        waveOutUnprepareHeader(hWaveOut, hdr, sizeof(WAVEHDR));
-    }
-    hdr->lpData = audio_buffers[idx];
-    hdr->dwBufferLength = (DWORD)byte_size;
-    hdr->dwFlags = 0;
-
-    waveOutPrepareHeader(hWaveOut, hdr, sizeof(WAVEHDR));
-    waveOutWrite(hWaveOut, hdr, sizeof(WAVEHDR));
-    playing_count++;
 
     return 0;
 }
 
+/* 播放文件：解码后写入缓冲区 */
 int pcm_play_file(const char* filename)
 {
-    FILE* fp = fopen(filename, "rb");
-    if (!fp) {
+    if (!g_ctx.is_initialized) return -1;
+
+    ma_device_stop(&g_ctx.device);
+
+    ma_decoder_config dec_config = ma_decoder_config_init(ma_format_s16, 2, g_ctx.device.sampleRate);
+    if (ma_decoder_init_file(filename, &dec_config, &g_ctx.decoder) != MA_SUCCESS)
+    {
         return -1;
     }
 
-    fseek(fp, 0, SEEK_END);
-    long file_size = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
+    /* 临时缓冲区，用于读取解码数据 */
+    uint8_t temp_buffer[4096];
+    while (1)
+    {
+        ma_uint64 frames_read;
+        ma_decoder_read_pcm_frames(&g_ctx.decoder, temp_buffer, sizeof(temp_buffer) / 4, &frames_read);
 
-    uint16_t* buffer = (uint16_t*)malloc(file_size);
-    if (!buffer) {
-        fclose(fp);
-        return -1;
-    }
+        if (frames_read == 0) break;
+ /* 再次提交给环形缓冲区 */
+        pcm_submit_buffer((const uint16_t*)temp_buffer, frames_read * 2);
 
-    fread(buffer, 1, file_size, fp);
-    fclose(fp);
-
-    size_t sample_count = file_size / sizeof(uint16_t);
-    size_t offset = 0;
-
-    while (offset < sample_count) {
-        size_t remaining = sample_count - offset;
-        size_t chunk = (remaining < MAX_SAMPLES_PER_BUF) ? remaining : MAX_SAMPLES_PER_BUF;
-
-        while (playing_count >= BUFFER_COUNT - 1) {
-            Sleep(1);
+        /* 等待缓冲区有空间 (简单防溢出) */
+        while (ma_pcm_rb_available_write(&g_ctx.rb) < frames_read)
+        {
+            /* 可以加个 Sleep(1) 避免死循环占用CPU */
         }
-
-        pcm_submit_buffer(buffer + offset, chunk);
-        offset += chunk;
     }
 
-    free(buffer);
+    ma_decoder_uninit(&g_ctx.decoder);
     return 0;
+}
+
+void pcm_stop(void)
+{
+    if (g_ctx.is_initialized)
+    {
+        ma_device_stop(&g_ctx.device);
+    }
 }
 
 void pcm_cleanup(void)
 {
-    if (hWaveOut) {
-        waveOutReset(hWaveOut);
-        for (int i = 0; i < BUFFER_COUNT; ++i) {
-            if (headers[i].dwFlags & WHDR_PREPARED) {
-                waveOutUnprepareHeader(hWaveOut, &headers[i], sizeof(WAVEHDR));
-            }
-            free(audio_buffers[i]);
-        }
-        waveOutClose(hWaveOut);
-        hWaveOut = NULL;
-    }
-    is_initialized = 0;
+    if (!g_ctx.is_initialized) return;
+
+    ma_device_uninit(&g_ctx.device);
+    ma_pcm_rb_uninit(&g_ctx.rb);
+    memset(&g_ctx, 0, sizeof(g_ctx));
 }
